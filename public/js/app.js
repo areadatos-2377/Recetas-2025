@@ -157,6 +157,7 @@
       '<tr class="unidad-row" data-clues="' + clues + '" tabindex="0">' +
       '<td class="col-clues">' + clues + '</td>' +
       '<td class="col-nombre">' + escapeHtml(u.nombre_tipo_establecimiento || '') + '</td>' +
+      '<td class="col-nombre-unidad">' + escapeHtml(u.nombre_unidad || '') + '</td>' +
       '<td class="col-estatus">' + statusBadgeHtml(u) + '</td>' +
       '</tr>'
     );
@@ -212,7 +213,6 @@
       detailField('Nivel de atención', u.nivel_atencion) +
       detailField('Propiedad del inmueble', u.propiedad_inmueble) +
       detailField('Tipología', u.nombre_tipologia) +
-      detailField('Nombre de la unidad', u.nombre_unidad) +
       detailField('Municipio', u.municipio) +
       detailField('Localidad', u.localidad) +
       detailField('Asentamiento', u.asentamiento) +
@@ -246,7 +246,7 @@
 
     return (
       '<tr class="detail-row" data-clues="' + escapeHtml(clues) + '">' +
-      '<td colspan="3">' +
+      '<td colspan="4">' +
       '<div class="detail-panel">' +
       '<div class="detail-grid">' + infoFields + '</div>' +
       '<div class="capture-form">' +
