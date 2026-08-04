@@ -23,6 +23,9 @@ app.use(cookieParser());
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
+// No hay public/index.html: la raiz manda directo al login.
+app.get('/', (req, res) => res.redirect('/login.html'));
+
 app.use('/api', authRoutes);
 app.use('/api', unidadesRoutes);
 app.use('/api', enviarRoutes);
