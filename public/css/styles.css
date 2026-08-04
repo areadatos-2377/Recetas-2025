@@ -512,6 +512,13 @@ tr.detail-row td {
   z-index: 50;
 }
 
+/* El atributo HTML "hidden" pierde contra "display: flex" de arriba si no
+   se refuerza aqui con mayor especificidad; sin esto el modal queda
+   visible tapando toda la pantalla desde que carga la pagina. */
+.modal-overlay[hidden] {
+  display: none;
+}
+
 .modal-box {
   background: var(--color-surface);
   border-radius: var(--radius-md);
