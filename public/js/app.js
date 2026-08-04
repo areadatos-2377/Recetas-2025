@@ -12,8 +12,27 @@
     capturadas: 0,
   };
 
-  var obsTimers = Object.create(null); // clues -> timeoutId, para el debounce de observaciones
+  var fieldTimers = Object.create(null); // "id:campo" -> timeoutId, para el debounce de texto
   var searchTimer = null;
+
+  // Campos que solo existen/editan en unidades agregadas a mano (sin CLUES
+  // original). Debe coincidir con MANUAL_ONLY_FIELDS del backend.
+  var MANUAL_FIELDS = [
+    { field: 'clues', label: 'CLUES' },
+    { field: 'nombre_unidad', label: 'Nombre de la unidad' },
+    { field: 'nombre_tipo_establecimiento', label: 'Nombre tipo establecimiento' },
+    { field: 'nivel_atencion', label: 'Nivel de atención' },
+    { field: 'propiedad_inmueble', label: 'Propiedad del inmueble' },
+    { field: 'nombre_tipologia', label: 'Tipología' },
+    { field: 'municipio', label: 'Municipio' },
+    { field: 'localidad', label: 'Localidad' },
+    { field: 'asentamiento', label: 'Asentamiento' },
+    { field: 'tipo_vialidad', label: 'Tipo de vialidad' },
+    { field: 'vialidad', label: 'Vialidad' },
+    { field: 'numero_exterior', label: 'Número exterior' },
+    { field: 'numero_interior', label: 'Número interior' },
+    { field: 'codigo_postal', label: 'Código postal' },
+  ];
 
   // ---------------------------------------------------------------------
   // Referencias al DOM
@@ -27,12 +46,19 @@
   var tableStatusEl = document.getElementById('table-status');
   var tbody = document.getElementById('unidades-tbody');
   var enviarBtn = document.getElementById('enviar-btn');
+  var addUnitBtn = document.getElementById('add-unit-btn');
 
   var confirmModal = document.getElementById('confirm-modal');
   var confirmModalBody = document.getElementById('confirm-modal-body');
   var confirmModalResult = document.getElementById('confirm-modal-result');
   var confirmCancelBtn = document.getElementById('confirm-cancel-btn');
   var confirmSendBtn = document.getElementById('confirm-send-btn');
+
+  var addUnitModal = document.getElementById('add-unit-modal');
+  var addUnitForm = document.getElementById('add-unit-form');
+  var addUnitError = document.getElementById('add-unit-error');
+  var addUnitCancelBtn = document.getElementById('add-unit-cancel-btn');
+  var addUnitSubmitBtn = document.getElementById('add-unit-submit-btn');
 
   // ---------------------------------------------------------------------
   // Utilidades
@@ -47,14 +73,6 @@
       .replace(/'/g, '&#39;');
   }
 
-  function cssEscape(value) {
-    if (window.CSS && typeof window.CSS.escape === 'function') {
-      return window.CSS.escape(value);
-    }
-    // Fallback simple para navegadores muy antiguos.
-    return String(value).replace(/[^a-zA-Z0-9_-]/g, '\\$&');
-  }
-
   function formatNumber(n) {
     try {
       return n.toLocaleString('es-MX');
@@ -67,9 +85,9 @@
     return !!(u.tipo_unidad && u.condicion_unidad);
   }
 
-  function findUnidad(clues) {
+  function findUnidad(id) {
     for (var i = 0; i < state.unidades.length; i++) {
-      if (state.unidades[i].clues === clues) return state.unidades[i];
+      if (state.unidades[i].id === id) return state.unidades[i];
     }
     return null;
   }
@@ -152,10 +170,12 @@
   }
 
   function rowHtml(u) {
-    var clues = escapeHtml(u.clues);
+    var cluesHtml = u.clues
+      ? escapeHtml(u.clues)
+      : '<em class="clues-pendiente">Sin CLUES</em>';
     return (
-      '<tr class="unidad-row" data-clues="' + clues + '" tabindex="0">' +
-      '<td class="col-clues">' + clues + '</td>' +
+      '<tr class="unidad-row" data-id="' + u.id + '" tabindex="0">' +
+      '<td class="col-clues">' + cluesHtml + '</td>' +
       '<td class="col-nombre">' + escapeHtml(u.nombre_tipo_establecimiento || '') + '</td>' +
       '<td class="col-nombre-unidad">' + escapeHtml(u.nombre_unidad || '') + '</td>' +
       '<td class="col-estatus">' + statusBadgeHtml(u) + '</td>' +
@@ -188,16 +208,27 @@
     );
   }
 
-  function radioGroupHtml(name, field, clues, options, currentValue) {
+  function editableFieldHtml(label, field, id, value) {
+    var inputId = 'field-' + field + '-' + id;
+    return (
+      '<div class="field detail-editable-field">' +
+      '<label for="' + inputId + '">' + escapeHtml(label) + '</label>' +
+      '<input type="text" id="' + inputId + '" data-field="' + field + '" data-id="' + id + '" ' +
+      'value="' + escapeHtml(value || '') + '">' +
+      '</div>'
+    );
+  }
+
+  function radioGroupHtml(name, field, id, options, currentValue) {
     var html = '<div class="radio-group" role="radiogroup">';
     for (var i = 0; i < options.length; i++) {
       var opt = options[i];
-      var id = field + '-' + opt.value + '-' + cssEscape(clues);
+      var optId = field + '-' + opt.value + '-' + id;
       var checked = currentValue === opt.value ? ' checked' : '';
       html +=
-        '<label class="radio-option" for="' + id + '">' +
-        '<input type="radio" id="' + id + '" name="' + name + '" value="' + opt.value + '" ' +
-        'data-field="' + field + '" data-clues="' + escapeHtml(clues) + '"' + checked + '>' +
+        '<label class="radio-option" for="' + optId + '">' +
+        '<input type="radio" id="' + optId + '" name="' + name + '" value="' + opt.value + '" ' +
+        'data-field="' + field + '" data-id="' + id + '"' + checked + '>' +
         '<span>' + escapeHtml(opt.label) + '</span>' +
         '</label>';
     }
@@ -206,26 +237,38 @@
   }
 
   function buildDetailRowHtml(u) {
-    var clues = u.clues;
-    var groupSuffix = cssEscape(clues);
+    var id = u.id;
+    var infoHtml;
 
-    var infoFields =
-      detailField('Nivel de atención', u.nivel_atencion) +
-      detailField('Propiedad del inmueble', u.propiedad_inmueble) +
-      detailField('Tipología', u.nombre_tipologia) +
-      detailField('Municipio', u.municipio) +
-      detailField('Localidad', u.localidad) +
-      detailField('Asentamiento', u.asentamiento) +
-      detailField('Tipo de vialidad', u.tipo_vialidad) +
-      detailField('Vialidad', u.vialidad) +
-      detailField('Número exterior', u.numero_exterior) +
-      detailField('Número interior', u.numero_interior) +
-      detailField('Código postal', u.codigo_postal);
+    if (u.origen_manual) {
+      var editableFields = '';
+      for (var i = 0; i < MANUAL_FIELDS.length; i++) {
+        var f = MANUAL_FIELDS[i];
+        editableFields += editableFieldHtml(f.label, f.field, id, u[f.field]);
+      }
+      infoHtml =
+        '<p class="manual-unit-note">Unidad agregada manualmente (sin CLUES del padrón oficial). Puedes corregir estos datos cuando haga falta.</p>' +
+        '<div class="detail-grid">' + editableFields + '</div>';
+    } else {
+      var infoFields =
+        detailField('Nivel de atención', u.nivel_atencion) +
+        detailField('Propiedad del inmueble', u.propiedad_inmueble) +
+        detailField('Tipología', u.nombre_tipologia) +
+        detailField('Municipio', u.municipio) +
+        detailField('Localidad', u.localidad) +
+        detailField('Asentamiento', u.asentamiento) +
+        detailField('Tipo de vialidad', u.tipo_vialidad) +
+        detailField('Vialidad', u.vialidad) +
+        detailField('Número exterior', u.numero_exterior) +
+        detailField('Número interior', u.numero_interior) +
+        detailField('Código postal', u.codigo_postal);
+      infoHtml = '<div class="detail-grid">' + infoFields + '</div>';
+    }
 
     var tipoUnidadRadios = radioGroupHtml(
-      'tipo_unidad-' + groupSuffix,
+      'tipo_unidad-' + id,
       'tipo_unidad',
-      clues,
+      id,
       [
         { value: 'FIJA', label: 'Fija' },
         { value: 'MOVIL', label: 'Móvil' },
@@ -234,9 +277,9 @@
     );
 
     var condicionRadios = radioGroupHtml(
-      'condicion_unidad-' + groupSuffix,
+      'condicion_unidad-' + id,
       'condicion_unidad',
-      clues,
+      id,
       [
         { value: 'SE_INCLUYE', label: 'Se incluye' },
         { value: 'SE_EXCLUYE', label: 'Se excluye' },
@@ -245,10 +288,10 @@
     );
 
     return (
-      '<tr class="detail-row" data-clues="' + escapeHtml(clues) + '">' +
+      '<tr class="detail-row" data-id="' + id + '">' +
       '<td colspan="4">' +
       '<div class="detail-panel">' +
-      '<div class="detail-grid">' + infoFields + '</div>' +
+      infoHtml +
       '<div class="capture-form">' +
       '<div class="form-group">' +
       '<span class="form-label">Tipo de unidad</span>' +
@@ -259,12 +302,12 @@
       condicionRadios +
       '</div>' +
       '<div class="form-group form-group-wide">' +
-      '<label class="form-label" for="obs-' + groupSuffix + '">Observaciones</label>' +
-      '<textarea id="obs-' + groupSuffix + '" class="observaciones-textarea" rows="3" ' +
-      'data-field="observaciones" data-clues="' + escapeHtml(clues) + '" ' +
+      '<label class="form-label" for="obs-' + id + '">Observaciones</label>' +
+      '<textarea id="obs-' + id + '" class="observaciones-textarea" rows="3" ' +
+      'data-field="observaciones" data-id="' + id + '" ' +
       'placeholder="Observaciones opcionales…">' + escapeHtml(u.observaciones || '') + '</textarea>' +
       '</div>' +
-      '<div class="save-feedback" data-feedback-for="' + escapeHtml(clues) + '"></div>' +
+      '<div class="save-feedback" data-feedback-for="' + id + '"></div>' +
       '</div>' +
       '</div>' +
       '</td>' +
@@ -281,15 +324,15 @@
     }
   }
 
-  function toggleRow(tr, clues) {
+  function toggleRow(tr, idStr) {
     var next = tr.nextElementSibling;
-    if (next && next.classList.contains('detail-row') && next.getAttribute('data-clues') === clues) {
+    if (next && next.classList.contains('detail-row') && next.getAttribute('data-id') === idStr) {
       next.parentNode.removeChild(next);
       tr.classList.remove('row-expanded');
       return;
     }
     closeOpenDetail();
-    var unidad = findUnidad(clues);
+    var unidad = findUnidad(Number(idStr));
     if (!unidad) return;
     tr.insertAdjacentHTML('afterend', buildDetailRowHtml(unidad));
     tr.classList.add('row-expanded');
@@ -298,8 +341,7 @@
   tbody.addEventListener('click', function (event) {
     var tr = event.target.closest('tr.unidad-row');
     if (!tr) return;
-    var clues = tr.getAttribute('data-clues');
-    toggleRow(tr, clues);
+    toggleRow(tr, tr.getAttribute('data-id'));
   });
 
   tbody.addEventListener('keydown', function (event) {
@@ -307,34 +349,47 @@
     var tr = event.target.closest('tr.unidad-row');
     if (!tr) return;
     event.preventDefault();
-    toggleRow(tr, tr.getAttribute('data-clues'));
+    toggleRow(tr, tr.getAttribute('data-id'));
   });
 
   // ---------------------------------------------------------------------
   // Autoguardado
   // ---------------------------------------------------------------------
-  function setFeedback(clues, message, type) {
-    var el = tbody.querySelector('.save-feedback[data-feedback-for="' + cssEscape(clues) + '"]');
+  function setFeedback(id, message, type) {
+    var el = tbody.querySelector('.save-feedback[data-feedback-for="' + id + '"]');
     if (!el) return;
     el.textContent = message;
     el.className = 'save-feedback' + (type ? ' save-feedback-' + type : '');
   }
 
-  function updateRowStatusBadge(clues) {
-    var unidad = findUnidad(clues);
-    if (!unidad) return;
-    var row = tbody.querySelector('tr.unidad-row[data-clues="' + cssEscape(clues) + '"]');
+  function updateRowVisualsAfterSave(id, field, value) {
+    var row = tbody.querySelector('tr.unidad-row[data-id="' + id + '"]');
     if (!row) return;
-    var cell = row.querySelector('.col-estatus');
-    if (cell) cell.innerHTML = statusBadgeHtml(unidad);
+    if (field === 'tipo_unidad' || field === 'condicion_unidad') {
+      var unidad = findUnidad(id);
+      var cell = row.querySelector('.col-estatus');
+      if (cell && unidad) cell.innerHTML = statusBadgeHtml(unidad);
+      recomputeProgresoLocal();
+    } else if (field === 'clues') {
+      var cluesCell = row.querySelector('.col-clues');
+      if (cluesCell) {
+        cluesCell.innerHTML = value ? escapeHtml(value) : '<em class="clues-pendiente">Sin CLUES</em>';
+      }
+    } else if (field === 'nombre_tipo_establecimiento') {
+      var nombreCell = row.querySelector('.col-nombre');
+      if (nombreCell) nombreCell.textContent = value || '';
+    } else if (field === 'nombre_unidad') {
+      var nombreUnidadCell = row.querySelector('.col-nombre-unidad');
+      if (nombreUnidadCell) nombreUnidadCell.textContent = value || '';
+    }
   }
 
-  function saveField(clues, field, value) {
-    setFeedback(clues, 'Guardando…', 'saving');
+  function saveField(id, field, value) {
+    setFeedback(id, 'Guardando…', 'saving');
     var body = {};
     body[field] = value;
 
-    return fetch('/api/unidades/' + encodeURIComponent(clues), {
+    return fetch('/api/unidades/' + id, {
       method: 'PUT',
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
@@ -349,63 +404,64 @@
         if (!result.ok) {
           throw new Error((result.data && result.data.error) || 'No se pudo guardar.');
         }
-        var unidad = findUnidad(clues);
+        var unidad = findUnidad(id);
         if (unidad) {
           unidad[field] = value;
         }
-        setFeedback(clues, 'Guardado', 'success');
-        if (field === 'tipo_unidad' || field === 'condicion_unidad') {
-          updateRowStatusBadge(clues);
-          recomputeProgresoLocal();
-        }
+        setFeedback(id, 'Guardado', 'success');
+        updateRowVisualsAfterSave(id, field, value);
       })
       .catch(function (err) {
-        setFeedback(clues, err.message || 'Error al guardar.', 'error');
+        setFeedback(id, err.message || 'Error al guardar.', 'error');
       });
   }
 
   tbody.addEventListener('change', function (event) {
     var el = event.target;
     if (el.matches('input[type="radio"][data-field="tipo_unidad"]')) {
-      saveField(el.getAttribute('data-clues'), 'tipo_unidad', el.value);
+      saveField(Number(el.getAttribute('data-id')), 'tipo_unidad', el.value);
     } else if (el.matches('input[type="radio"][data-field="condicion_unidad"]')) {
-      saveField(el.getAttribute('data-clues'), 'condicion_unidad', el.value);
+      saveField(Number(el.getAttribute('data-id')), 'condicion_unidad', el.value);
     }
   });
 
-  function scheduleObservacionesSave(el) {
-    var clues = el.getAttribute('data-clues');
+  function scheduleFieldSave(el) {
+    var id = Number(el.getAttribute('data-id'));
+    var field = el.getAttribute('data-field');
     var value = el.value;
-    if (obsTimers[clues]) {
-      clearTimeout(obsTimers[clues]);
+    var key = id + ':' + field;
+    if (fieldTimers[key]) {
+      clearTimeout(fieldTimers[key]);
     }
-    setFeedback(clues, 'Escribiendo…', 'saving');
-    obsTimers[clues] = setTimeout(function () {
-      delete obsTimers[clues];
-      saveField(clues, 'observaciones', value);
+    setFeedback(id, 'Escribiendo…', 'saving');
+    fieldTimers[key] = setTimeout(function () {
+      delete fieldTimers[key];
+      saveField(id, field, value);
     }, 700);
   }
 
-  function flushObservacionesSave(el) {
-    var clues = el.getAttribute('data-clues');
-    if (obsTimers[clues]) {
-      clearTimeout(obsTimers[clues]);
-      delete obsTimers[clues];
-      saveField(clues, 'observaciones', el.value);
+  function flushFieldSave(el) {
+    var id = Number(el.getAttribute('data-id'));
+    var field = el.getAttribute('data-field');
+    var key = id + ':' + field;
+    if (fieldTimers[key]) {
+      clearTimeout(fieldTimers[key]);
+      delete fieldTimers[key];
+      saveField(id, field, el.value);
     }
   }
 
   tbody.addEventListener('input', function (event) {
     var el = event.target;
-    if (el.matches('textarea[data-field="observaciones"]')) {
-      scheduleObservacionesSave(el);
+    if (el.matches('textarea[data-field="observaciones"]') || el.matches('input[type="text"][data-field]')) {
+      scheduleFieldSave(el);
     }
   });
 
   tbody.addEventListener('focusout', function (event) {
     var el = event.target;
-    if (el.matches('textarea[data-field="observaciones"]')) {
-      flushObservacionesSave(el);
+    if (el.matches('textarea[data-field="observaciones"]') || el.matches('input[type="text"][data-field]')) {
+      flushFieldSave(el);
     }
   });
 
@@ -464,6 +520,83 @@
         tableStatusEl.textContent = err.message || 'Ocurrió un error al cargar las unidades.';
       });
   }
+
+  // ---------------------------------------------------------------------
+  // Agregar unidad sin CLUES
+  // ---------------------------------------------------------------------
+  function openAddUnitModal() {
+    addUnitForm.reset();
+    addUnitError.hidden = true;
+    addUnitError.textContent = '';
+    addUnitSubmitBtn.disabled = false;
+    addUnitSubmitBtn.textContent = 'Agregar unidad';
+    addUnitModal.hidden = false;
+    var firstInput = addUnitForm.querySelector('input');
+    if (firstInput) firstInput.focus();
+  }
+
+  function closeAddUnitModal() {
+    addUnitModal.hidden = true;
+  }
+
+  addUnitBtn.addEventListener('click', openAddUnitModal);
+  addUnitCancelBtn.addEventListener('click', closeAddUnitModal);
+  addUnitModal.addEventListener('click', function (event) {
+    if (event.target === addUnitModal) closeAddUnitModal();
+  });
+
+  addUnitForm.addEventListener('submit', function (event) {
+    event.preventDefault();
+    addUnitError.hidden = true;
+    addUnitError.textContent = '';
+
+    var payload = {};
+    for (var i = 0; i < MANUAL_FIELDS.length; i++) {
+      var field = MANUAL_FIELDS[i].field;
+      if (field === 'clues') continue; // una unidad nueva siempre empieza sin CLUES
+      var input = addUnitForm.querySelector('[name="' + field + '"]');
+      payload[field] = input ? input.value : '';
+    }
+
+    if (!payload.nombre_unidad || !payload.nombre_unidad.trim()) {
+      addUnitError.hidden = false;
+      addUnitError.textContent = 'El nombre de la unidad es obligatorio.';
+      return;
+    }
+
+    addUnitSubmitBtn.disabled = true;
+    addUnitSubmitBtn.textContent = 'Agregando…';
+
+    fetch('/api/unidades', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+      .then(function (res) {
+        return res.json().then(function (data) {
+          return { ok: res.ok, data: data };
+        });
+      })
+      .then(function (result) {
+        if (!result.ok) {
+          throw new Error((result.data && result.data.error) || 'No se pudo agregar la unidad.');
+        }
+        closeAddUnitModal();
+        return loadUnidades().then(function () {
+          applyFilter(searchInput.value);
+          recomputeProgresoLocal();
+        });
+      })
+      .catch(function (err) {
+        addUnitError.hidden = false;
+        addUnitError.textContent = err.message || 'Ocurrió un error al agregar la unidad.';
+      })
+      .finally(function () {
+        addUnitSubmitBtn.disabled = false;
+        addUnitSubmitBtn.textContent = 'Agregar unidad';
+      });
+  });
 
   // ---------------------------------------------------------------------
   // Envío final

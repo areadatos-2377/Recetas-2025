@@ -437,6 +437,28 @@ tr.detail-row td {
   gap: 0.9rem 1.5rem;
 }
 
+.clues-pendiente {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.manual-unit-note {
+  font-size: 0.85rem;
+  color: var(--color-secondary-text);
+  background: var(--color-secondary);
+  border-radius: var(--radius-sm);
+  padding: 0.5em 0.75em;
+  margin: 0;
+}
+
+.detail-grid .field {
+  margin-bottom: 0;
+}
+
+.detail-editable-field input {
+  font-size: 0.9rem;
+}
+
 .form-group-wide {
   grid-column: 1 / -1;
 }
@@ -525,7 +547,29 @@ tr.detail-row td {
   padding: 1.5rem 1.6rem;
   width: 100%;
   max-width: 460px;
+  max-height: 90vh;
+  overflow-y: auto;
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.25);
+}
+
+.modal-box-wide {
+  max-width: 720px;
+}
+
+.modal-subtitle {
+  font-size: 0.88rem;
+  color: var(--color-text-muted);
+  margin: -0.35rem 0 1rem;
+}
+
+.add-unit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  gap: 0 1.25rem;
+}
+
+.field-wide {
+  grid-column: 1 / -1;
 }
 
 .modal-box h2 {
@@ -603,5 +647,9 @@ tr.detail-row td {
 
   .detail-grid {
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+
+  .add-unit-grid {
+    grid-template-columns: 1fr;
   }
 }

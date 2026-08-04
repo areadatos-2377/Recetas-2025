@@ -18,9 +18,14 @@ CREATE TABLE IF NOT EXISTS submissions (
   creado_en         TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Padron de unidades, precargado desde legacy/CLUES_IMB.xlsx (hoja BD_IMS_Final).
+-- Padron de unidades, precargado desde legacy/CLUES_IMB.xlsx (hoja BD_IMS_Final),
+-- mas las que cada entidad agregue a mano cuando aun no tienen CLUES asignado.
+-- La llave primaria es "id" (no CLUES): puede haber varias unidades sin CLUES
+-- todavia (clues = NULL), y CLUES es unico solo entre las que si tienen valor
+-- (una restriccion UNIQUE normal en Postgres ya permite muchos NULL).
 CREATE TABLE IF NOT EXISTS unidades (
-  clues                          TEXT PRIMARY KEY,
+  id                              SERIAL PRIMARY KEY,
+  clues                           TEXT UNIQUE,
   estado                         TEXT NOT NULL,
   tipo_unidad                    TEXT CHECK (tipo_unidad IN ('FIJA', 'MOVIL')),
   condicion_unidad               TEXT CHECK (condicion_unidad IN ('SE_INCLUYE', 'SE_EXCLUYE')),
@@ -38,6 +43,9 @@ CREATE TABLE IF NOT EXISTS unidades (
   numero_interior                TEXT,
   codigo_postal                  TEXT,
   observaciones                  TEXT,
+  -- true solo para unidades agregadas a mano (sin CLUES original). Las que
+  -- vienen del padron oficial nunca deben poder editar su CLUES.
+  origen_manual                   BOOLEAN NOT NULL DEFAULT false,
   capturado_en                   TIMESTAMPTZ,
   enviado_en                     TIMESTAMPTZ,
   submission_id                  INTEGER REFERENCES submissions(id)
