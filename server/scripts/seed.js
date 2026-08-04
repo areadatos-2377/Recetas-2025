@@ -38,6 +38,49 @@ function cell(row, idx) {
   return trimmed === '' ? null : trimmed;
 }
 
+const BATCH_SIZE = 250;
+const COLUMNS_PER_ROW = 15;
+
+// Inserta un lote en un solo INSERT multi-fila (una sola conexion redonda),
+// en vez de una fila a la vez: sobre una conexion remota (proxy publico de
+// Railway) cientos de idas y vueltas individuales son lentas y se pueden
+// quedar "pensando"; unas pocas decenas de lotes son mucho mas confiables
+// y ademas permiten ver el avance en vivo.
+async function insertBatch(rows) {
+  const valuesSql = [];
+  const params = [];
+  rows.forEach((row, i) => {
+    const base = i * COLUMNS_PER_ROW;
+    const placeholders = Array.from({ length: COLUMNS_PER_ROW }, (_, j) => `$${base + j + 1}`);
+    valuesSql.push(`(${placeholders.join(',')})`);
+    params.push(...row);
+  });
+
+  await pool.query(
+    `INSERT INTO unidades (
+       clues, estado, nivel_atencion, nombre_tipo_establecimiento, propiedad_inmueble,
+       nombre_tipologia, nombre_unidad, municipio, localidad, asentamiento,
+       tipo_vialidad, vialidad, numero_exterior, numero_interior, codigo_postal
+     ) VALUES ${valuesSql.join(',')}
+     ON CONFLICT (clues) DO UPDATE SET
+       estado = EXCLUDED.estado,
+       nivel_atencion = EXCLUDED.nivel_atencion,
+       nombre_tipo_establecimiento = EXCLUDED.nombre_tipo_establecimiento,
+       propiedad_inmueble = EXCLUDED.propiedad_inmueble,
+       nombre_tipologia = EXCLUDED.nombre_tipologia,
+       nombre_unidad = EXCLUDED.nombre_unidad,
+       municipio = EXCLUDED.municipio,
+       localidad = EXCLUDED.localidad,
+       asentamiento = EXCLUDED.asentamiento,
+       tipo_vialidad = EXCLUDED.tipo_vialidad,
+       vialidad = EXCLUDED.vialidad,
+       numero_exterior = EXCLUDED.numero_exterior,
+       numero_interior = EXCLUDED.numero_interior,
+       codigo_postal = EXCLUDED.codigo_postal`,
+    params
+  );
+}
+
 async function run() {
   const schema = fs.readFileSync(path.join(__dirname, '..', 'schema.sql'), 'utf8');
   await pool.query(schema);
@@ -63,74 +106,47 @@ async function run() {
     }
   }
 
-  let processed = 0;
+  // Primero se lee todo el Excel a memoria (rapido, sin tocar la base),
+  // y ya con la lista completa se manda a Postgres en lotes.
+  const allRows = [];
   let skipped = 0;
 
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
+  for (let rowNumber = 2; rowNumber <= sheet.rowCount; rowNumber++) {
+    const row = sheet.getRow(rowNumber);
+    if (!row.hasValues) continue;
 
-    for (let rowNumber = 2; rowNumber <= sheet.rowCount; rowNumber++) {
-      const row = sheet.getRow(rowNumber);
-      if (!row.hasValues) continue;
-
-      const clues = cell(row, colIndexByField.clues);
-      const estado = cell(row, colIndexByField.estado);
-      if (!clues || !estado) {
-        skipped++;
-        continue;
-      }
-
-      const values = [
-        clues,
-        estado,
-        cell(row, colIndexByField.nivel_atencion),
-        cell(row, colIndexByField.nombre_tipo_establecimiento),
-        cell(row, colIndexByField.propiedad_inmueble),
-        cell(row, colIndexByField.nombre_tipologia),
-        cell(row, colIndexByField.nombre_unidad),
-        cell(row, colIndexByField.municipio),
-        cell(row, colIndexByField.localidad),
-        cell(row, colIndexByField.asentamiento),
-        cell(row, colIndexByField.tipo_vialidad),
-        cell(row, colIndexByField.vialidad),
-        cell(row, colIndexByField.numero_exterior),
-        cell(row, colIndexByField.numero_interior),
-        cell(row, colIndexByField.codigo_postal),
-      ];
-
-      await client.query(
-        `INSERT INTO unidades (
-           clues, estado, nivel_atencion, nombre_tipo_establecimiento, propiedad_inmueble,
-           nombre_tipologia, nombre_unidad, municipio, localidad, asentamiento,
-           tipo_vialidad, vialidad, numero_exterior, numero_interior, codigo_postal
-         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
-         ON CONFLICT (clues) DO UPDATE SET
-           estado = EXCLUDED.estado,
-           nivel_atencion = EXCLUDED.nivel_atencion,
-           nombre_tipo_establecimiento = EXCLUDED.nombre_tipo_establecimiento,
-           propiedad_inmueble = EXCLUDED.propiedad_inmueble,
-           nombre_tipologia = EXCLUDED.nombre_tipologia,
-           nombre_unidad = EXCLUDED.nombre_unidad,
-           municipio = EXCLUDED.municipio,
-           localidad = EXCLUDED.localidad,
-           asentamiento = EXCLUDED.asentamiento,
-           tipo_vialidad = EXCLUDED.tipo_vialidad,
-           vialidad = EXCLUDED.vialidad,
-           numero_exterior = EXCLUDED.numero_exterior,
-           numero_interior = EXCLUDED.numero_interior,
-           codigo_postal = EXCLUDED.codigo_postal`,
-        values
-      );
-      processed++;
+    const clues = cell(row, colIndexByField.clues);
+    const estado = cell(row, colIndexByField.estado);
+    if (!clues || !estado) {
+      skipped++;
+      continue;
     }
 
-    await client.query('COMMIT');
-  } catch (err) {
-    await client.query('ROLLBACK');
-    throw err;
-  } finally {
-    client.release();
+    allRows.push([
+      clues,
+      estado,
+      cell(row, colIndexByField.nivel_atencion),
+      cell(row, colIndexByField.nombre_tipo_establecimiento),
+      cell(row, colIndexByField.propiedad_inmueble),
+      cell(row, colIndexByField.nombre_tipologia),
+      cell(row, colIndexByField.nombre_unidad),
+      cell(row, colIndexByField.municipio),
+      cell(row, colIndexByField.localidad),
+      cell(row, colIndexByField.asentamiento),
+      cell(row, colIndexByField.tipo_vialidad),
+      cell(row, colIndexByField.vialidad),
+      cell(row, colIndexByField.numero_exterior),
+      cell(row, colIndexByField.numero_interior),
+      cell(row, colIndexByField.codigo_postal),
+    ]);
+  }
+
+  let processed = 0;
+  for (let i = 0; i < allRows.length; i += BATCH_SIZE) {
+    const batch = allRows.slice(i, i + BATCH_SIZE);
+    await insertBatch(batch);
+    processed += batch.length;
+    console.log(`Cargadas ${processed}/${allRows.length} (${Math.round((processed / allRows.length) * 100)}%)`);
   }
 
   console.log(`Listo. Filas cargadas/actualizadas: ${processed}. Omitidas (sin CLUES/ESTADO): ${skipped}.`);
