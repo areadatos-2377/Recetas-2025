@@ -1,0 +1,24 @@
+{
+  "name": "captura-unidades-imb",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Captura de TIPO_UNIDAD y CONDICION_UNIDAD por entidad federativa sobre el padron CLUES_IMB",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "seed": "node server/scripts/seed.js",
+    "gen:passwords": "node server/scripts/generate-passwords.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.6",
+    "dotenv": "^16.4.5",
+    "exceljs": "^4.4.0",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.0",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.12.0"
+  }
+}
