@@ -30,7 +30,12 @@ const MANUAL_ONLY_FIELDS = [
   'numero_exterior',
   'numero_interior',
   'codigo_postal',
+  'estatus_operacion',
+  'latitud',
+  'longitud',
 ];
+
+const CATALOGO_BUSQUEDA_MAX_LEN = 200;
 
 function trimmedOrNull(value) {
   if (value === undefined || value === null) return null;
@@ -46,11 +51,41 @@ router.get('/unidades', requireAuth, async (req, res, next) => {
               nombre_tipo_establecimiento, propiedad_inmueble, nombre_tipologia,
               nombre_unidad, municipio, localidad, asentamiento, tipo_vialidad,
               vialidad, numero_exterior, numero_interior, codigo_postal, observaciones,
+              estatus_operacion, latitud, longitud,
               origen_manual, capturado_en, enviado_en
        FROM unidades WHERE estado = $1 ORDER BY nombre_unidad, clues`,
       [req.estado]
     );
     res.json({ estado: req.estado, unidades: rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Busca en el catalogo nacional SSA (solo dentro de la entidad de la sesion)
+// para autocompletar el formulario de "Agregar unidad".
+router.get('/catalogo-ssa', requireAuth, async (req, res, next) => {
+  try {
+    const buscar = typeof req.query.buscar === 'string' ? req.query.buscar.trim() : '';
+    if (!buscar) {
+      return res.json({ resultados: [] });
+    }
+    if (buscar.length > CATALOGO_BUSQUEDA_MAX_LEN) {
+      return res.status(400).json({ error: 'Busqueda demasiado larga' });
+    }
+
+    const { rows } = await pool.query(
+      `SELECT clues, nivel_atencion, nombre_tipo_establecimiento, propiedad_inmueble,
+              nombre_tipologia, nombre_unidad, municipio, localidad, asentamiento,
+              tipo_vialidad, vialidad, numero_exterior, numero_interior, codigo_postal,
+              estatus_operacion, latitud, longitud
+       FROM catalogo_ssa
+       WHERE estado = $1 AND nombre_unidad ILIKE $2
+       ORDER BY nombre_unidad
+       LIMIT 20`,
+      [req.estado, `%${buscar}%`]
+    );
+    res.json({ resultados: rows });
   } catch (err) {
     next(err);
   }
@@ -120,17 +155,20 @@ router.post('/unidades', requireAuth, async (req, res, next) => {
            estado, clues, origen_manual, tipo_unidad, condicion_unidad, observaciones,
            nivel_atencion, nombre_tipo_establecimiento, propiedad_inmueble, nombre_tipologia,
            nombre_unidad, municipio, localidad, asentamiento, tipo_vialidad, vialidad,
-           numero_exterior, numero_interior, codigo_postal, capturado_en
+           numero_exterior, numero_interior, codigo_postal,
+           estatus_operacion, latitud, longitud, capturado_en
          ) VALUES (
            $1, $2, true, $3, $4, $5,
            $6, $7, $8, $9,
            $10, $11, $12, $13, $14, $15,
-           $16, $17, $18, now()
+           $16, $17, $18,
+           $19, $20, $21, now()
          )
          RETURNING id, clues, estado, tipo_unidad, condicion_unidad, nivel_atencion,
                    nombre_tipo_establecimiento, propiedad_inmueble, nombre_tipologia,
                    nombre_unidad, municipio, localidad, asentamiento, tipo_vialidad,
                    vialidad, numero_exterior, numero_interior, codigo_postal, observaciones,
+                   estatus_operacion, latitud, longitud,
                    origen_manual, capturado_en, enviado_en`,
         [
           req.estado,
@@ -151,6 +189,9 @@ router.post('/unidades', requireAuth, async (req, res, next) => {
           textFields.numero_exterior,
           textFields.numero_interior,
           textFields.codigo_postal,
+          textFields.estatus_operacion,
+          textFields.latitud,
+          textFields.longitud,
         ]
       ));
     } catch (err) {

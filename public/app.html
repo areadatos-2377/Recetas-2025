@@ -95,9 +95,11 @@
       <form id="add-unit-form" novalidate>
         <div id="add-unit-error" class="alert alert-error" role="alert" hidden></div>
         <div class="add-unit-grid">
-          <div class="field field-wide">
+          <div class="field field-wide catalog-search-field">
             <label for="add-nombre_unidad">Nombre de la unidad *</label>
-            <input type="text" id="add-nombre_unidad" name="nombre_unidad" required>
+            <input type="text" id="add-nombre_unidad" name="nombre_unidad" autocomplete="off" required>
+            <p class="field-hint">Empieza a escribir para buscar en el catálogo nacional y llenar los datos automáticamente, o sigue escribiendo y llena todo a mano.</p>
+            <div id="catalog-suggestions" class="catalog-suggestions" hidden></div>
           </div>
           <div class="field field-wide">
             <label for="add-clues">CLUES (opcional)</label>
@@ -150,6 +152,18 @@
           <div class="field">
             <label for="add-codigo_postal">Código postal</label>
             <input type="text" id="add-codigo_postal" name="codigo_postal">
+          </div>
+          <div class="field">
+            <label for="add-estatus_operacion">Estatus de operación (catálogo)</label>
+            <input type="text" id="add-estatus_operacion" name="estatus_operacion">
+          </div>
+          <div class="field">
+            <label for="add-latitud">Latitud</label>
+            <input type="text" id="add-latitud" name="latitud">
+          </div>
+          <div class="field">
+            <label for="add-longitud">Longitud</label>
+            <input type="text" id="add-longitud" name="longitud">
           </div>
         </div>
 

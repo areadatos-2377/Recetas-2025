@@ -39,6 +39,9 @@
     { field: 'numero_exterior', label: 'Número exterior' },
     { field: 'numero_interior', label: 'Número interior' },
     { field: 'codigo_postal', label: 'Código postal' },
+    { field: 'estatus_operacion', label: 'Estatus de operación (catálogo)' },
+    { field: 'latitud', label: 'Latitud' },
+    { field: 'longitud', label: 'Longitud' },
   ];
 
   // ---------------------------------------------------------------------
@@ -68,6 +71,8 @@
   var addUnitError = document.getElementById('add-unit-error');
   var addUnitCancelBtn = document.getElementById('add-unit-cancel-btn');
   var addUnitSubmitBtn = document.getElementById('add-unit-submit-btn');
+  var catalogNombreInput = document.getElementById('add-nombre_unidad');
+  var catalogSuggestionsEl = document.getElementById('catalog-suggestions');
 
   // ---------------------------------------------------------------------
   // Utilidades
@@ -285,7 +290,10 @@
         detailField('Vialidad', u.vialidad) +
         detailField('Número exterior', u.numero_exterior) +
         detailField('Número interior', u.numero_interior) +
-        detailField('Código postal', u.codigo_postal);
+        detailField('Código postal', u.codigo_postal) +
+        detailField('Estatus de operación', u.estatus_operacion) +
+        detailField('Latitud', u.latitud) +
+        detailField('Longitud', u.longitud);
       infoHtml = '<div class="detail-grid">' + infoFields + '</div>';
     }
 
@@ -547,6 +555,7 @@
     addUnitError.textContent = '';
     addUnitSubmitBtn.disabled = false;
     addUnitSubmitBtn.textContent = 'Agregar unidad';
+    hideCatalogSuggestions();
     addUnitModal.hidden = false;
     var firstInput = addUnitForm.querySelector('input');
     if (firstInput) firstInput.focus();
@@ -555,6 +564,99 @@
   function closeAddUnitModal() {
     addUnitModal.hidden = true;
   }
+
+  // ---------------------------------------------------------------------
+  // Buscador del catalogo SSA (autocompletar "Agregar unidad")
+  // ---------------------------------------------------------------------
+  var catalogSearchTimer = null;
+
+  function hideCatalogSuggestions() {
+    catalogSuggestionsEl.hidden = true;
+    catalogSuggestionsEl.innerHTML = '';
+  }
+
+  function catalogResultLine(r) {
+    var partes = [r.municipio, r.localidad].filter(Boolean).join(', ');
+    if (r.nombre_tipo_establecimiento) {
+      partes = partes ? partes + ' · ' + r.nombre_tipo_establecimiento : r.nombre_tipo_establecimiento;
+    }
+    return partes;
+  }
+
+  function renderCatalogSuggestions(resultados, query) {
+    if (resultados.length === 0) {
+      catalogSuggestionsEl.innerHTML =
+        '<div class="catalog-suggestion-empty">Sin coincidencias en el catálogo para "' + escapeHtml(query) + '". Puedes seguir llenando los datos a mano.</div>';
+      catalogSuggestionsEl.hidden = false;
+      return;
+    }
+
+    catalogSuggestionsEl.innerHTML = resultados
+      .map(function (r, i) {
+        return (
+          '<button type="button" class="catalog-suggestion-item" data-index="' + i + '">' +
+          '<span class="catalog-suggestion-name">' + escapeHtml(r.nombre_unidad) + '</span>' +
+          '<span class="catalog-suggestion-meta">' + escapeHtml(catalogResultLine(r)) + '</span>' +
+          '</button>'
+        );
+      })
+      .join('');
+    catalogSuggestionsEl.hidden = false;
+
+    catalogSuggestionsEl.querySelectorAll('.catalog-suggestion-item').forEach(function (btn) {
+      // mousedown (no click) para que dispare antes del blur del input.
+      btn.addEventListener('mousedown', function (event) {
+        event.preventDefault();
+        var idx = Number(btn.getAttribute('data-index'));
+        applyCatalogResult(resultados[idx]);
+      });
+    });
+  }
+
+  function applyCatalogResult(r) {
+    var fieldsToFill = [
+      'clues', 'nombre_unidad', 'nombre_tipo_establecimiento', 'nivel_atencion',
+      'propiedad_inmueble', 'nombre_tipologia', 'municipio', 'localidad',
+      'asentamiento', 'tipo_vialidad', 'vialidad', 'numero_exterior',
+      'numero_interior', 'codigo_postal', 'estatus_operacion', 'latitud', 'longitud',
+    ];
+    fieldsToFill.forEach(function (field) {
+      var input = addUnitForm.querySelector('[name="' + field + '"]');
+      if (input) input.value = r[field] || '';
+    });
+    hideCatalogSuggestions();
+  }
+
+  function searchCatalog(query) {
+    fetch('/api/catalogo-ssa?buscar=' + encodeURIComponent(query), { credentials: 'same-origin' })
+      .then(function (res) {
+        if (!res.ok) throw new Error('busqueda fallida');
+        return res.json();
+      })
+      .then(function (data) {
+        if (catalogNombreInput.value.trim() !== query) return; // el usuario ya siguio escribiendo
+        renderCatalogSuggestions(data.resultados || [], query);
+      })
+      .catch(function () {
+        hideCatalogSuggestions();
+      });
+  }
+
+  catalogNombreInput.addEventListener('input', function () {
+    var query = catalogNombreInput.value.trim();
+    if (catalogSearchTimer) clearTimeout(catalogSearchTimer);
+    if (query.length < 2) {
+      hideCatalogSuggestions();
+      return;
+    }
+    catalogSearchTimer = setTimeout(function () {
+      searchCatalog(query);
+    }, 300);
+  });
+
+  catalogNombreInput.addEventListener('blur', function () {
+    setTimeout(hideCatalogSuggestions, 150);
+  });
 
   addUnitBtn.addEventListener('click', openAddUnitModal);
   addUnitCancelBtn.addEventListener('click', closeAddUnitModal);

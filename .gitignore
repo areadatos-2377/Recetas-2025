@@ -4,3 +4,5 @@ secrets/
 *.log
 .claude/
 backups/
+.agents/
+skills-lock.json

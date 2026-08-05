@@ -12,7 +12,8 @@ router.post('/enviar', requireAuth, async (req, res, next) => {
       `SELECT clues, estado, tipo_unidad, condicion_unidad, nivel_atencion,
               nombre_tipo_establecimiento, propiedad_inmueble, nombre_tipologia,
               nombre_unidad, municipio, localidad, asentamiento, tipo_vialidad,
-              vialidad, numero_exterior, numero_interior, codigo_postal, observaciones
+              vialidad, numero_exterior, numero_interior, codigo_postal, observaciones,
+              estatus_operacion, latitud, longitud
        FROM unidades WHERE estado = $1 ORDER BY nombre_unidad, clues`,
       [req.estado]
     );

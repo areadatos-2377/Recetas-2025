@@ -44,6 +44,11 @@ CREATE TABLE IF NOT EXISTS unidades (
   numero_interior                TEXT,
   codigo_postal                  TEXT,
   observaciones                  TEXT,
+  -- Solo se llenan cuando la unidad se crea eligiendo un resultado del
+  -- catalogo_ssa (ver mas abajo); nulas para todo lo demas.
+  estatus_operacion               TEXT,
+  latitud                          TEXT,
+  longitud                         TEXT,
   -- true solo para unidades agregadas a mano (sin CLUES original). Las que
   -- vienen del padron oficial nunca deben poder editar su CLUES.
   origen_manual                   BOOLEAN NOT NULL DEFAULT false,
@@ -54,3 +59,31 @@ CREATE TABLE IF NOT EXISTS unidades (
 );
 
 CREATE INDEX IF NOT EXISTS idx_unidades_estado ON unidades(estado);
+
+-- Catalogo nacional de referencia (legacy/CLUES_SSA.xlsx), usado solo para
+-- autocompletar el formulario de "Agregar unidad". Es de solo lectura desde
+-- la app: se recarga completa cada vez que se corre el seed, no tiene datos
+-- de usuario que proteger.
+CREATE TABLE IF NOT EXISTS catalogo_ssa (
+  id                              SERIAL PRIMARY KEY,
+  estado                          TEXT NOT NULL,
+  clues                           TEXT NOT NULL,
+  nivel_atencion                  TEXT,
+  nombre_tipo_establecimiento     TEXT,
+  propiedad_inmueble              TEXT,
+  nombre_tipologia                TEXT,
+  nombre_unidad                   TEXT NOT NULL,
+  municipio                       TEXT,
+  localidad                       TEXT,
+  asentamiento                    TEXT,
+  tipo_vialidad                   TEXT,
+  vialidad                        TEXT,
+  numero_exterior                 TEXT,
+  numero_interior                 TEXT,
+  codigo_postal                   TEXT,
+  estatus_operacion               TEXT,
+  latitud                         TEXT,
+  longitud                        TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_catalogo_ssa_estado_nombre ON catalogo_ssa (estado, nombre_unidad);

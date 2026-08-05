@@ -8,6 +8,17 @@ const { pool } = require('../db');
 const LEGACY_FILE = path.join(__dirname, '..', '..', 'legacy', 'CLUES_IMB.xlsx');
 const SHEET_NAME = 'BD_IMS_Final';
 
+// El Excel a veces trae el nombre de la entidad en el formato "oficial"
+// largo (igual que el catalogo SSA) en vez del nombre corto que usa el
+// resto del sistema. Sin esto, una entidad con el nombre distinto se trata
+// como una entidad nueva (filas duplicadas) en vez de actualizar la ya
+// existente.
+const ESTADO_NORMALIZADO = {
+  'CIUDAD DE MEXICO': 'CDMX',
+  'MICHOACAN DE OCAMPO': 'MICHOACAN',
+  'VERACRUZ DE IGNACIO DE LA LLAVE': 'VERACRUZ',
+};
+
 // TIPO_UNIDAD, CONDICION_UNIDAD y OBSERVACIONES vienen vacios en el Excel legacy
 // y se llenan solo desde la app, por lo que NO se siembran aqui: si el seed se
 // vuelve a correr no debe pisar la captura que ya hicieron los usuarios.
@@ -27,6 +38,9 @@ const COLUMN_MAP = {
   'NUMERO EXTERIOR': 'numero_exterior',
   'NUMERO INTERIOR': 'numero_interior',
   'CODIGO POSTAL': 'codigo_postal',
+  'ESTATUS DE OPERACION': 'estatus_operacion',
+  LATITUD: 'latitud',
+  LONGITUD: 'longitud',
 };
 
 function cell(row, idx) {
@@ -39,7 +53,7 @@ function cell(row, idx) {
 }
 
 const BATCH_SIZE = 250;
-const COLUMNS_PER_ROW = 15;
+const COLUMNS_PER_ROW = 18;
 
 // Inserta un lote en un solo INSERT multi-fila (una sola conexion redonda),
 // en vez de una fila a la vez: sobre una conexion remota (proxy publico de
@@ -60,7 +74,8 @@ async function insertBatch(rows) {
     `INSERT INTO unidades (
        clues, estado, nivel_atencion, nombre_tipo_establecimiento, propiedad_inmueble,
        nombre_tipologia, nombre_unidad, municipio, localidad, asentamiento,
-       tipo_vialidad, vialidad, numero_exterior, numero_interior, codigo_postal
+       tipo_vialidad, vialidad, numero_exterior, numero_interior, codigo_postal,
+       estatus_operacion, latitud, longitud
      ) VALUES ${valuesSql.join(',')}
      ON CONFLICT (estado, clues) DO UPDATE SET
        estado = EXCLUDED.estado,
@@ -76,7 +91,10 @@ async function insertBatch(rows) {
        vialidad = EXCLUDED.vialidad,
        numero_exterior = EXCLUDED.numero_exterior,
        numero_interior = EXCLUDED.numero_interior,
-       codigo_postal = EXCLUDED.codigo_postal`,
+       codigo_postal = EXCLUDED.codigo_postal,
+       estatus_operacion = EXCLUDED.estatus_operacion,
+       latitud = EXCLUDED.latitud,
+       longitud = EXCLUDED.longitud`,
     params
   );
 }
@@ -116,11 +134,12 @@ async function run() {
     if (!row.hasValues) continue;
 
     const clues = cell(row, colIndexByField.clues);
-    const estado = cell(row, colIndexByField.estado);
-    if (!clues || !estado) {
+    const estadoOriginal = cell(row, colIndexByField.estado);
+    if (!clues || !estadoOriginal) {
       skipped++;
       continue;
     }
+    const estado = ESTADO_NORMALIZADO[estadoOriginal] || estadoOriginal;
 
     allRows.push([
       clues,
@@ -138,6 +157,9 @@ async function run() {
       cell(row, colIndexByField.numero_exterior),
       cell(row, colIndexByField.numero_interior),
       cell(row, colIndexByField.codigo_postal),
+      cell(row, colIndexByField.estatus_operacion),
+      cell(row, colIndexByField.latitud),
+      cell(row, colIndexByField.longitud),
     ]);
   }
 

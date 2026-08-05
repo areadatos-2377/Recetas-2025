@@ -19,6 +19,9 @@ const COLUMNS = [
   { header: 'NUMERO INTERIOR', key: 'numero_interior', width: 14 },
   { header: 'CODIGO POSTAL', key: 'codigo_postal', width: 12 },
   { header: 'OBSERVACIONES', key: 'observaciones', width: 40 },
+  { header: 'ESTATUS DE OPERACION', key: 'estatus_operacion', width: 20 },
+  { header: 'LATITUD', key: 'latitud', width: 12 },
+  { header: 'LONGITUD', key: 'longitud', width: 12 },
 ];
 
 const TIPO_UNIDAD_LABELS = { FIJA: 'FIJA', MOVIL: 'MOVIL' };
