@@ -14,6 +14,7 @@ for (const key of ['DATABASE_URL', 'JWT_SECRET']) {
 const authRoutes = require('./routes/auth');
 const unidadesRoutes = require('./routes/unidades');
 const enviarRoutes = require('./routes/enviar');
+const adminRoutes = require('./routes/admin');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -29,6 +30,7 @@ app.get('/', (req, res) => res.redirect('/login.html'));
 app.use('/api', authRoutes);
 app.use('/api', unidadesRoutes);
 app.use('/api', enviarRoutes);
+app.use('/api', adminRoutes);
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
 

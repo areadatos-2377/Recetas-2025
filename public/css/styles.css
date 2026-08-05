@@ -471,6 +471,21 @@ tr.detail-row td {
   gap: 0.9rem 1.5rem;
 }
 
+.sortable-table th[data-sort] {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sortable-table th[data-sort]:hover {
+  color: var(--color-primary);
+}
+
+.national-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
 .clues-pendiente {
   color: var(--color-text-muted);
   font-style: italic;
