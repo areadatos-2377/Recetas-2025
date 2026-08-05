@@ -5,7 +5,7 @@ const { requireAuth } = require('../middleware/requireAuth');
 const router = express.Router();
 
 const TIPO_UNIDAD_VALUES = ['FIJA', 'MOVIL'];
-const CONDICION_UNIDAD_VALUES = ['SE_INCLUYE', 'SE_EXCLUYE'];
+const CONDICION_UNIDAD_VALUES = ['SE_RATIFICA', 'SE_INCLUYE', 'SE_EXCLUYE'];
 const OBSERVACIONES_MAX_LEN = 5000;
 const TEXT_FIELD_MAX_LEN = 300;
 
@@ -61,7 +61,12 @@ router.get('/progreso', requireAuth, async (req, res, next) => {
     const { rows } = await pool.query(
       `SELECT
          COUNT(*)::int AS total,
-         COUNT(*) FILTER (WHERE tipo_unidad IS NOT NULL AND condicion_unidad IS NOT NULL)::int AS capturadas
+         COUNT(*) FILTER (
+           WHERE tipo_unidad IS NOT NULL
+             AND condicion_unidad IS NOT NULL
+             AND observaciones IS NOT NULL
+             AND btrim(observaciones) <> ''
+         )::int AS capturadas
        FROM unidades WHERE estado = $1`,
       [req.estado]
     );
@@ -97,7 +102,6 @@ router.post('/unidades', requireAuth, async (req, res, next) => {
 
     const textFields = {};
     for (const field of MANUAL_ONLY_FIELDS) {
-      if (field === 'clues') continue; // una unidad nueva siempre empieza sin CLUES
       const value = trimmedOrNull(body[field]);
       if (value === undefined) {
         return res.status(400).json({ error: `${field} invalido` });
@@ -109,43 +113,52 @@ router.post('/unidades', requireAuth, async (req, res, next) => {
     }
     textFields.nombre_unidad = nombreUnidad;
 
-    const { rows } = await pool.query(
-      `INSERT INTO unidades (
-         estado, clues, origen_manual, tipo_unidad, condicion_unidad, observaciones,
-         nivel_atencion, nombre_tipo_establecimiento, propiedad_inmueble, nombre_tipologia,
-         nombre_unidad, municipio, localidad, asentamiento, tipo_vialidad, vialidad,
-         numero_exterior, numero_interior, codigo_postal, capturado_en
-       ) VALUES (
-         $1, NULL, true, $2, $3, $4,
-         $5, $6, $7, $8,
-         $9, $10, $11, $12, $13, $14,
-         $15, $16, $17, now()
-       )
-       RETURNING id, clues, estado, tipo_unidad, condicion_unidad, nivel_atencion,
-                 nombre_tipo_establecimiento, propiedad_inmueble, nombre_tipologia,
-                 nombre_unidad, municipio, localidad, asentamiento, tipo_vialidad,
-                 vialidad, numero_exterior, numero_interior, codigo_postal, observaciones,
-                 origen_manual, capturado_en, enviado_en`,
-      [
-        req.estado,
-        body.tipo_unidad ?? null,
-        body.condicion_unidad ?? null,
-        typeof body.observaciones === 'string' ? body.observaciones : null,
-        textFields.nivel_atencion,
-        textFields.nombre_tipo_establecimiento,
-        textFields.propiedad_inmueble,
-        textFields.nombre_tipologia,
-        textFields.nombre_unidad,
-        textFields.municipio,
-        textFields.localidad,
-        textFields.asentamiento,
-        textFields.tipo_vialidad,
-        textFields.vialidad,
-        textFields.numero_exterior,
-        textFields.numero_interior,
-        textFields.codigo_postal,
-      ]
-    );
+    let rows;
+    try {
+      ({ rows } = await pool.query(
+        `INSERT INTO unidades (
+           estado, clues, origen_manual, tipo_unidad, condicion_unidad, observaciones,
+           nivel_atencion, nombre_tipo_establecimiento, propiedad_inmueble, nombre_tipologia,
+           nombre_unidad, municipio, localidad, asentamiento, tipo_vialidad, vialidad,
+           numero_exterior, numero_interior, codigo_postal, capturado_en
+         ) VALUES (
+           $1, $2, true, $3, $4, $5,
+           $6, $7, $8, $9,
+           $10, $11, $12, $13, $14, $15,
+           $16, $17, $18, now()
+         )
+         RETURNING id, clues, estado, tipo_unidad, condicion_unidad, nivel_atencion,
+                   nombre_tipo_establecimiento, propiedad_inmueble, nombre_tipologia,
+                   nombre_unidad, municipio, localidad, asentamiento, tipo_vialidad,
+                   vialidad, numero_exterior, numero_interior, codigo_postal, observaciones,
+                   origen_manual, capturado_en, enviado_en`,
+        [
+          req.estado,
+          textFields.clues,
+          body.tipo_unidad ?? null,
+          body.condicion_unidad ?? null,
+          typeof body.observaciones === 'string' ? body.observaciones : null,
+          textFields.nivel_atencion,
+          textFields.nombre_tipo_establecimiento,
+          textFields.propiedad_inmueble,
+          textFields.nombre_tipologia,
+          textFields.nombre_unidad,
+          textFields.municipio,
+          textFields.localidad,
+          textFields.asentamiento,
+          textFields.tipo_vialidad,
+          textFields.vialidad,
+          textFields.numero_exterior,
+          textFields.numero_interior,
+          textFields.codigo_postal,
+        ]
+      ));
+    } catch (err) {
+      if (err.code === '23505') {
+        return res.status(409).json({ error: 'Ese CLUES ya esta registrado en otra unidad de tu entidad' });
+      }
+      throw err;
+    }
 
     res.status(201).json({ unidad: rows[0] });
   } catch (err) {

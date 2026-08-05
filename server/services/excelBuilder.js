@@ -22,7 +22,11 @@ const COLUMNS = [
 ];
 
 const TIPO_UNIDAD_LABELS = { FIJA: 'FIJA', MOVIL: 'MOVIL' };
-const CONDICION_UNIDAD_LABELS = { SE_INCLUYE: 'SE INCLUYE', SE_EXCLUYE: 'SE EXCLUYE' };
+const CONDICION_UNIDAD_LABELS = {
+  SE_RATIFICA: 'SE RATIFICA',
+  SE_INCLUYE: 'SE INCLUYE',
+  SE_EXCLUYE: 'SE EXCLUYE',
+};
 
 async function buildUnidadesWorkbook(estado, unidades) {
   const workbook = new ExcelJS.Workbook();
@@ -44,10 +48,30 @@ async function buildUnidadesWorkbook(estado, unidades) {
 
 const DIACRITICS_PATTERN = new RegExp('[\\u0300-\\u036f]', 'g');
 
+const MEXICO_CITY_FORMATTER = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/Mexico_City',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+});
+
+// El servidor (Railway) corre en UTC; el nombre del archivo debe reflejar
+// la hora de Ciudad de Mexico, por eso se usa Intl con la zona horaria en
+// vez de las fechas locales del proceso (new Date().getHours(), etc.).
+function mexicoCityStamp(date) {
+  const parts = MEXICO_CITY_FORMATTER.formatToParts(date).reduce((acc, part) => {
+    acc[part.type] = part.value;
+    return acc;
+  }, {});
+  const hour = parts.hour === '24' ? '00' : parts.hour;
+  return `${parts.year}-${parts.month}-${parts.day}_${hour}${parts.minute}`;
+}
+
 function buildFileName(estado) {
-  const now = new Date();
-  const pad = (n) => String(n).padStart(2, '0');
-  const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
+  const stamp = mexicoCityStamp(new Date());
   const safeEstado = estado
     .normalize('NFD')
     .replace(DIACRITICS_PATTERN, '')

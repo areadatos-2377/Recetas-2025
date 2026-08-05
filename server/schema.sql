@@ -15,20 +15,21 @@ CREATE TABLE IF NOT EXISTS submissions (
   total_unidades    INTEGER,
   incluidas         INTEGER,
   excluidas         INTEGER,
+  ratificadas       INTEGER,
   creado_en         TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- Padron de unidades, precargado desde legacy/CLUES_IMB.xlsx (hoja BD_IMS_Final),
 -- mas las que cada entidad agregue a mano cuando aun no tienen CLUES asignado.
 -- La llave primaria es "id" (no CLUES): puede haber varias unidades sin CLUES
--- todavia (clues = NULL), y CLUES es unico solo entre las que si tienen valor
--- (una restriccion UNIQUE normal en Postgres ya permite muchos NULL).
+-- todavia (clues = NULL), y CLUES es unico solo dentro de la misma entidad
+-- (para que un CLUES libre/provisional no choque entre dos entidades distintas).
 CREATE TABLE IF NOT EXISTS unidades (
   id                              SERIAL PRIMARY KEY,
-  clues                           TEXT UNIQUE,
+  clues                           TEXT,
   estado                         TEXT NOT NULL,
   tipo_unidad                    TEXT CHECK (tipo_unidad IN ('FIJA', 'MOVIL')),
-  condicion_unidad               TEXT CHECK (condicion_unidad IN ('SE_INCLUYE', 'SE_EXCLUYE')),
+  condicion_unidad               TEXT CHECK (condicion_unidad IN ('SE_INCLUYE', 'SE_EXCLUYE', 'SE_RATIFICA')),
   nivel_atencion                 TEXT,
   nombre_tipo_establecimiento    TEXT,
   propiedad_inmueble             TEXT,
@@ -48,7 +49,8 @@ CREATE TABLE IF NOT EXISTS unidades (
   origen_manual                   BOOLEAN NOT NULL DEFAULT false,
   capturado_en                   TIMESTAMPTZ,
   enviado_en                     TIMESTAMPTZ,
-  submission_id                  INTEGER REFERENCES submissions(id)
+  submission_id                  INTEGER REFERENCES submissions(id),
+  UNIQUE (estado, clues)
 );
 
 CREATE INDEX IF NOT EXISTS idx_unidades_estado ON unidades(estado);

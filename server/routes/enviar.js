@@ -24,6 +24,7 @@ router.post('/enviar', requireAuth, async (req, res, next) => {
     const total = unidades.length;
     const incluidas = unidades.filter((u) => u.condicion_unidad === 'SE_INCLUYE').length;
     const excluidas = unidades.filter((u) => u.condicion_unidad === 'SE_EXCLUYE').length;
+    const ratificadas = unidades.filter((u) => u.condicion_unidad === 'SE_RATIFICA').length;
 
     const buffer = await buildUnidadesWorkbook(req.estado, unidades);
     const fileName = buildFileName(req.estado);
@@ -36,10 +37,10 @@ router.post('/enviar', requireAuth, async (req, res, next) => {
     }
 
     const { rows: submissionRows } = await pool.query(
-      `INSERT INTO submissions (estado, archivo_nombre, drive_file_id, drive_file_url, total_unidades, incluidas, excluidas)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO submissions (estado, archivo_nombre, drive_file_id, drive_file_url, total_unidades, incluidas, excluidas, ratificadas)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING id, creado_en`,
-      [req.estado, fileName, uploadResult.fileId, uploadResult.fileUrl, total, incluidas, excluidas]
+      [req.estado, fileName, uploadResult.fileId, uploadResult.fileUrl, total, incluidas, excluidas, ratificadas]
     );
 
     const submission = submissionRows[0];
@@ -56,7 +57,8 @@ router.post('/enviar', requireAuth, async (req, res, next) => {
       total,
       incluidas,
       excluidas,
-      pendientes: total - incluidas - excluidas,
+      ratificadas,
+      pendientes: total - incluidas - excluidas - ratificadas,
       creadoEn: submission.creado_en,
     });
   } catch (err) {

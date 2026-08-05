@@ -29,25 +29,46 @@
       <div class="search-field">
         <input type="search" id="search-input" placeholder="Buscar por CLUES o nombre del tipo de establecimiento…" aria-label="Buscar unidad">
       </div>
-      <button type="button" id="add-unit-btn" class="btn btn-secondary">Agregar unidad sin CLUES</button>
+      <button type="button" id="add-unit-btn" class="btn btn-secondary">Agregar unidad</button>
       <button type="button" id="enviar-btn" class="btn btn-primary">Enviar información</button>
     </section>
 
     <div id="table-status" class="table-status" hidden></div>
 
-    <div class="table-wrap">
-      <table class="unidades-table" id="unidades-table">
-        <thead>
-          <tr>
-            <th class="col-clues">CLUES</th>
-            <th class="col-nombre">Nombre tipo establecimiento</th>
-            <th class="col-nombre-unidad">Nombre de la unidad</th>
-            <th class="col-estatus">Estatus</th>
-          </tr>
-        </thead>
-        <tbody id="unidades-tbody">
-        </tbody>
-      </table>
+    <div id="tables-container">
+      <div class="table-wrap">
+        <table class="unidades-table" id="unidades-table">
+          <thead>
+            <tr>
+              <th class="col-clues">CLUES</th>
+              <th class="col-nombre">Nombre tipo establecimiento</th>
+              <th class="col-nombre-unidad">Nombre de la unidad</th>
+              <th class="col-estatus">Estatus</th>
+            </tr>
+          </thead>
+          <tbody id="unidades-tbody">
+          </tbody>
+        </table>
+      </div>
+
+      <section class="manual-units-section">
+        <h2>Unidades agregadas manualmente</h2>
+        <p class="section-subtitle">Unidades sin CLUES del padrón oficial, agregadas por tu entidad.</p>
+        <div class="table-wrap">
+          <table class="unidades-table" id="unidades-manual-table">
+            <thead>
+              <tr>
+                <th class="col-clues">CLUES</th>
+                <th class="col-nombre">Nombre tipo establecimiento</th>
+                <th class="col-nombre-unidad">Nombre de la unidad</th>
+                <th class="col-estatus">Estatus</th>
+              </tr>
+            </thead>
+            <tbody id="unidades-manual-tbody">
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   </main>
 
@@ -77,6 +98,10 @@
           <div class="field field-wide">
             <label for="add-nombre_unidad">Nombre de la unidad *</label>
             <input type="text" id="add-nombre_unidad" name="nombre_unidad" required>
+          </div>
+          <div class="field field-wide">
+            <label for="add-clues">CLUES (opcional)</label>
+            <input type="text" id="add-clues" name="clues" placeholder="Puedes usar un identificador provisional; no tiene que seguir el formato oficial">
           </div>
           <div class="field">
             <label for="add-nombre_tipo_establecimiento">Nombre tipo establecimiento</label>
@@ -127,6 +152,45 @@
             <input type="text" id="add-codigo_postal" name="codigo_postal">
           </div>
         </div>
+
+        <div class="capture-form">
+          <div class="form-group">
+            <span class="form-label">Tipo de unidad</span>
+            <div class="radio-group" role="radiogroup">
+              <label class="radio-option" for="add-tipo-fija">
+                <input type="radio" id="add-tipo-fija" name="tipo_unidad" value="FIJA">
+                <span>Fija</span>
+              </label>
+              <label class="radio-option" for="add-tipo-movil">
+                <input type="radio" id="add-tipo-movil" name="tipo_unidad" value="MOVIL">
+                <span>Móvil</span>
+              </label>
+            </div>
+          </div>
+          <div class="form-group">
+            <span class="form-label">Acción a realizar en el anexo 1</span>
+            <div class="radio-group" role="radiogroup">
+              <label class="radio-option" for="add-condicion-ratifica">
+                <input type="radio" id="add-condicion-ratifica" name="condicion_unidad" value="SE_RATIFICA">
+                <span>Se ratifica</span>
+              </label>
+              <label class="radio-option" for="add-condicion-incluye">
+                <input type="radio" id="add-condicion-incluye" name="condicion_unidad" value="SE_INCLUYE">
+                <span>Se incluye</span>
+              </label>
+              <label class="radio-option" for="add-condicion-excluye">
+                <input type="radio" id="add-condicion-excluye" name="condicion_unidad" value="SE_EXCLUYE">
+                <span>Se excluye</span>
+              </label>
+            </div>
+          </div>
+          <div class="form-group form-group-wide">
+            <label class="form-label" for="add-observaciones">Observaciones</label>
+            <p class="field-hint">Explica brevemente la razón de la acción elegida — se necesita para que la unidad cuente como capturada.</p>
+            <textarea id="add-observaciones" name="observaciones" class="observaciones-textarea" rows="3" placeholder="Razón de la inclusión, exclusión o ratificación…"></textarea>
+          </div>
+        </div>
+
         <div class="modal-actions">
           <button type="button" id="add-unit-cancel-btn" class="btn btn-secondary">Cancelar</button>
           <button type="submit" id="add-unit-submit-btn" class="btn btn-primary">Agregar unidad</button>

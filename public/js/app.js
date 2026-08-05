@@ -15,6 +15,13 @@
   var fieldTimers = Object.create(null); // "id:campo" -> timeoutId, para el debounce de texto
   var searchTimer = null;
 
+  var CONDICION_OPTIONS = [
+    { value: 'SE_RATIFICA', label: 'Se ratifica' },
+    { value: 'SE_INCLUYE', label: 'Se incluye' },
+    { value: 'SE_EXCLUYE', label: 'Se excluye' },
+  ];
+  var CONDICION_LABEL_TEXT = 'Acción a realizar en el anexo 1';
+
   // Campos que solo existen/editan en unidades agregadas a mano (sin CLUES
   // original). Debe coincidir con MANUAL_ONLY_FIELDS del backend.
   var MANUAL_FIELDS = [
@@ -44,7 +51,9 @@
   var progressBarTrackEl = document.getElementById('progress-bar-track');
   var searchInput = document.getElementById('search-input');
   var tableStatusEl = document.getElementById('table-status');
+  var tablesContainer = document.getElementById('tables-container');
   var tbody = document.getElementById('unidades-tbody');
+  var manualTbody = document.getElementById('unidades-manual-tbody');
   var enviarBtn = document.getElementById('enviar-btn');
   var addUnitBtn = document.getElementById('add-unit-btn');
 
@@ -81,8 +90,12 @@
     }
   }
 
+  function hasText(value) {
+    return !!(value && String(value).trim() !== '');
+  }
+
   function isCapturada(u) {
-    return !!(u.tipo_unidad && u.condicion_unidad);
+    return !!(u.tipo_unidad && u.condicion_unidad && hasText(u.observaciones));
   }
 
   function findUnidad(id) {
@@ -159,9 +172,6 @@
   // ---------------------------------------------------------------------
   // Tabla: render
   // ---------------------------------------------------------------------
-  var TIPO_UNIDAD_LABELS = { FIJA: 'Fija', MOVIL: 'Móvil' };
-  var CONDICION_LABELS = { SE_INCLUYE: 'Se incluye', SE_EXCLUYE: 'Se excluye' };
-
   function statusBadgeHtml(u) {
     if (isCapturada(u)) {
       return '<span class="status-badge status-capturado">Capturado</span>';
@@ -183,20 +193,34 @@
     );
   }
 
-  function renderTable(list) {
+  function renderInto(targetTbody, list, emptyMessage) {
     if (list.length === 0) {
-      tbody.innerHTML = '';
-      tableStatusEl.hidden = false;
-      tableStatusEl.textContent = 'No se encontraron unidades con ese criterio de búsqueda.';
+      targetTbody.innerHTML = '<tr class="table-empty-row"><td colspan="4" class="table-empty-note">' + escapeHtml(emptyMessage) + '</td></tr>';
       return;
     }
-    tableStatusEl.hidden = true;
-    tableStatusEl.textContent = '';
     var html = new Array(list.length);
     for (var i = 0; i < list.length; i++) {
       html[i] = rowHtml(list[i]);
     }
-    tbody.innerHTML = html.join('');
+    targetTbody.innerHTML = html.join('');
+  }
+
+  function renderAll() {
+    var oficiales = [];
+    var manuales = [];
+    for (var i = 0; i < state.filtered.length; i++) {
+      if (state.filtered[i].origen_manual) manuales.push(state.filtered[i]);
+      else oficiales.push(state.filtered[i]);
+    }
+
+    tableStatusEl.hidden = true;
+    renderInto(tbody, oficiales, 'No se encontraron unidades con ese criterio de búsqueda.');
+
+    var totalManuales = state.unidades.filter(function (u) { return u.origen_manual; }).length;
+    var emptyManualMessage = totalManuales === 0
+      ? 'Aún no has agregado unidades sin CLUES del padrón oficial.'
+      : 'No se encontraron unidades con ese criterio de búsqueda.';
+    renderInto(manualTbody, manuales, emptyManualMessage);
   }
 
   function detailField(label, value) {
@@ -276,16 +300,7 @@
       u.tipo_unidad
     );
 
-    var condicionRadios = radioGroupHtml(
-      'condicion_unidad-' + id,
-      'condicion_unidad',
-      id,
-      [
-        { value: 'SE_INCLUYE', label: 'Se incluye' },
-        { value: 'SE_EXCLUYE', label: 'Se excluye' },
-      ],
-      u.condicion_unidad
-    );
+    var condicionRadios = radioGroupHtml('condicion_unidad-' + id, 'condicion_unidad', id, CONDICION_OPTIONS, u.condicion_unidad);
 
     return (
       '<tr class="detail-row" data-id="' + id + '">' +
@@ -298,14 +313,15 @@
       tipoUnidadRadios +
       '</div>' +
       '<div class="form-group">' +
-      '<span class="form-label">Condición de la unidad</span>' +
+      '<span class="form-label">' + escapeHtml(CONDICION_LABEL_TEXT) + '</span>' +
       condicionRadios +
       '</div>' +
       '<div class="form-group form-group-wide">' +
       '<label class="form-label" for="obs-' + id + '">Observaciones</label>' +
+      '<p class="field-hint">Explica brevemente la razón de la acción elegida — se necesita para que la unidad cuente como capturada.</p>' +
       '<textarea id="obs-' + id + '" class="observaciones-textarea" rows="3" ' +
       'data-field="observaciones" data-id="' + id + '" ' +
-      'placeholder="Observaciones opcionales…">' + escapeHtml(u.observaciones || '') + '</textarea>' +
+      'placeholder="Razón de la inclusión, exclusión o ratificación…">' + escapeHtml(u.observaciones || '') + '</textarea>' +
       '</div>' +
       '<div class="save-feedback" data-feedback-for="' + id + '"></div>' +
       '</div>' +
@@ -316,7 +332,7 @@
   }
 
   function closeOpenDetail() {
-    var openDetail = tbody.querySelector('.detail-row');
+    var openDetail = tablesContainer.querySelector('.detail-row');
     if (openDetail) {
       var prev = openDetail.previousElementSibling;
       if (prev) prev.classList.remove('row-expanded');
@@ -338,13 +354,13 @@
     tr.classList.add('row-expanded');
   }
 
-  tbody.addEventListener('click', function (event) {
+  tablesContainer.addEventListener('click', function (event) {
     var tr = event.target.closest('tr.unidad-row');
     if (!tr) return;
     toggleRow(tr, tr.getAttribute('data-id'));
   });
 
-  tbody.addEventListener('keydown', function (event) {
+  tablesContainer.addEventListener('keydown', function (event) {
     if (event.key !== 'Enter' && event.key !== ' ') return;
     var tr = event.target.closest('tr.unidad-row');
     if (!tr) return;
@@ -356,21 +372,22 @@
   // Autoguardado
   // ---------------------------------------------------------------------
   function setFeedback(id, message, type) {
-    var el = tbody.querySelector('.save-feedback[data-feedback-for="' + id + '"]');
+    var el = tablesContainer.querySelector('.save-feedback[data-feedback-for="' + id + '"]');
     if (!el) return;
     el.textContent = message;
     el.className = 'save-feedback' + (type ? ' save-feedback-' + type : '');
   }
 
   function updateRowVisualsAfterSave(id, field, value) {
-    var row = tbody.querySelector('tr.unidad-row[data-id="' + id + '"]');
+    var row = tablesContainer.querySelector('tr.unidad-row[data-id="' + id + '"]');
     if (!row) return;
-    if (field === 'tipo_unidad' || field === 'condicion_unidad') {
+    if (field === 'tipo_unidad' || field === 'condicion_unidad' || field === 'observaciones') {
       var unidad = findUnidad(id);
       var cell = row.querySelector('.col-estatus');
       if (cell && unidad) cell.innerHTML = statusBadgeHtml(unidad);
       recomputeProgresoLocal();
-    } else if (field === 'clues') {
+    }
+    if (field === 'clues') {
       var cluesCell = row.querySelector('.col-clues');
       if (cluesCell) {
         cluesCell.innerHTML = value ? escapeHtml(value) : '<em class="clues-pendiente">Sin CLUES</em>';
@@ -416,7 +433,7 @@
       });
   }
 
-  tbody.addEventListener('change', function (event) {
+  tablesContainer.addEventListener('change', function (event) {
     var el = event.target;
     if (el.matches('input[type="radio"][data-field="tipo_unidad"]')) {
       saveField(Number(el.getAttribute('data-id')), 'tipo_unidad', el.value);
@@ -451,14 +468,14 @@
     }
   }
 
-  tbody.addEventListener('input', function (event) {
+  tablesContainer.addEventListener('input', function (event) {
     var el = event.target;
     if (el.matches('textarea[data-field="observaciones"]') || el.matches('input[type="text"][data-field]')) {
       scheduleFieldSave(el);
     }
   });
 
-  tbody.addEventListener('focusout', function (event) {
+  tablesContainer.addEventListener('focusout', function (event) {
     var el = event.target;
     if (el.matches('textarea[data-field="observaciones"]') || el.matches('input[type="text"][data-field]')) {
       flushFieldSave(el);
@@ -481,7 +498,7 @@
         );
       });
     }
-    renderTable(state.filtered);
+    renderAll();
   }
 
   searchInput.addEventListener('input', function () {
@@ -512,7 +529,7 @@
         state.unidades = data.unidades || [];
         state.filtered = state.unidades;
         estadoNombreEl.textContent = state.estado || '—';
-        renderTable(state.filtered);
+        renderAll();
       })
       .catch(function (err) {
         if (err.message === 'no-session') return;
@@ -553,10 +570,18 @@
     var payload = {};
     for (var i = 0; i < MANUAL_FIELDS.length; i++) {
       var field = MANUAL_FIELDS[i].field;
-      if (field === 'clues') continue; // una unidad nueva siempre empieza sin CLUES
       var input = addUnitForm.querySelector('[name="' + field + '"]');
       payload[field] = input ? input.value : '';
     }
+
+    var checkedTipo = addUnitForm.querySelector('input[name="tipo_unidad"]:checked');
+    payload.tipo_unidad = checkedTipo ? checkedTipo.value : null;
+
+    var checkedCondicion = addUnitForm.querySelector('input[name="condicion_unidad"]:checked');
+    payload.condicion_unidad = checkedCondicion ? checkedCondicion.value : null;
+
+    var observacionesInput = addUnitForm.querySelector('[name="observaciones"]');
+    payload.observaciones = observacionesInput ? observacionesInput.value : '';
 
     if (!payload.nombre_unidad || !payload.nombre_unidad.trim()) {
       addUnitError.hidden = false;
@@ -605,13 +630,15 @@
     var total = state.unidades.length;
     var incluidas = 0;
     var excluidas = 0;
+    var ratificadas = 0;
     for (var i = 0; i < state.unidades.length; i++) {
       var c = state.unidades[i].condicion_unidad;
       if (c === 'SE_INCLUYE') incluidas++;
       else if (c === 'SE_EXCLUYE') excluidas++;
+      else if (c === 'SE_RATIFICA') ratificadas++;
     }
-    var pendientes = total - incluidas - excluidas;
-    return { total: total, incluidas: incluidas, excluidas: excluidas, pendientes: pendientes };
+    var pendientes = total - incluidas - excluidas - ratificadas;
+    return { total: total, incluidas: incluidas, excluidas: excluidas, ratificadas: ratificadas, pendientes: pendientes };
   }
 
   function openConfirmModal() {
@@ -620,6 +647,7 @@
       '<p>Estás a punto de generar y subir el archivo de captura para <strong>' + escapeHtml(state.estado || '') + '</strong>.</p>' +
       '<ul class="summary-list">' +
       '<li><strong>' + formatNumber(summary.total) + '</strong> unidades en total</li>' +
+      '<li><strong>' + formatNumber(summary.ratificadas) + '</strong> se ratifican</li>' +
       '<li><strong>' + formatNumber(summary.incluidas) + '</strong> se incluyen</li>' +
       '<li><strong>' + formatNumber(summary.excluidas) + '</strong> se excluyen</li>' +
       '<li><strong>' + formatNumber(summary.pendientes) + '</strong> pendientes de captura</li>' +

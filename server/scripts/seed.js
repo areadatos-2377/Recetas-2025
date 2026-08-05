@@ -62,7 +62,7 @@ async function insertBatch(rows) {
        nombre_tipologia, nombre_unidad, municipio, localidad, asentamiento,
        tipo_vialidad, vialidad, numero_exterior, numero_interior, codigo_postal
      ) VALUES ${valuesSql.join(',')}
-     ON CONFLICT (clues) DO UPDATE SET
+     ON CONFLICT (estado, clues) DO UPDATE SET
        estado = EXCLUDED.estado,
        nivel_atencion = EXCLUDED.nivel_atencion,
        nombre_tipo_establecimiento = EXCLUDED.nombre_tipo_establecimiento,
