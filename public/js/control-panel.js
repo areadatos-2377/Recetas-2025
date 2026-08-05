@@ -36,6 +36,10 @@
     }
   }
 
+  function pluralize(n, singular, plural) {
+    return formatNumber(n) + ' ' + (n === 1 ? singular : plural);
+  }
+
   function formatFecha(iso) {
     if (!iso) return null;
     try {
@@ -183,7 +187,7 @@
       '<article class="focus-card focus-risk">' +
       '<div class="focus-card-head"><span>Zona de mayor riesgo</span><small>Requiere seguimiento</small></div>' +
       '<p class="focus-card-copy">' + pendientes + ' entidades siguen sin enviar. Prioridad por volumen pendiente:</p>' +
-      renderEntityList(riskRows, function (r) { return formatNumber(r.total - r.capturadas) + ' pendientes'; }, 'No hay entidades pendientes.') +
+      renderEntityList(riskRows, function (r) { return pluralize(r.total - r.capturadas, 'pendiente', 'pendientes'); }, 'No hay entidades pendientes.') +
       '</article>' +
       '<article class="focus-card focus-active">' +
       '<div class="focus-card-head"><span>Entidades activas</span><small>Cumplimiento reciente</small></div>' +
@@ -193,7 +197,7 @@
       '<article class="focus-card focus-validation">' +
       '<div class="focus-card-head"><span>Hallazgos de validacion</span><small>Revision operativa</small></div>' +
       '<p class="focus-card-copy">' + formatNumber(observaciones) + ' registros requieren lectura por incluir, excluir o no contar con CLUES.</p>' +
-      renderEntityList(observationRows, function (r) { return formatNumber(validationCount(r)) + ' hallazgos'; }, 'No hay hallazgos acumulados.') +
+      renderEntityList(observationRows, function (r) { return pluralize(validationCount(r), 'hallazgo', 'hallazgos'); }, 'No hay hallazgos acumulados.') +
       '</article>';
 
     updateFilterLabels();

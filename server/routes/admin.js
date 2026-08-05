@@ -79,13 +79,17 @@ router.get('/admin/resumen', requireAdmin, async (req, res, next) => {
     `);
 
     const { rows: ultimosEnvios } = await pool.query(`
-      SELECT DISTINCT ON (estado) estado, archivo_nombre, creado_en
+      SELECT DISTINCT ON (estado) estado, archivo_nombre, drive_file_url, creado_en
       FROM submissions
       ORDER BY estado, creado_en DESC
     `);
     const ultimoPorEstado = {};
     ultimosEnvios.forEach((row) => {
-      ultimoPorEstado[row.estado] = { archivoNombre: row.archivo_nombre, creadoEn: row.creado_en };
+      ultimoPorEstado[row.estado] = {
+        archivoNombre: row.archivo_nombre,
+        archivoUrl: row.drive_file_url,
+        creadoEn: row.creado_en,
+      };
     });
 
     const resumen = porEstado.map((row) => ({
