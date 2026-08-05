@@ -4,43 +4,63 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
-<title>Avance nacional</title>
+<title>Reporte narrativo de avance nacional</title>
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body class="app-body">
   <header class="app-header">
     <div class="app-header-title">
-      <h1>Avance nacional</h1>
+      <h1>Reporte nacional</h1>
     </div>
     <button type="button" id="logout-btn" class="btn btn-secondary">Cerrar sesión</button>
   </header>
 
   <main class="app-main">
-    <section class="progress-section national-summary" id="national-summary" aria-label="Resumen nacional">
-      <p>Cargando resumen…</p>
+    <section class="story-report" aria-label="Reporte narrativo de avance nacional">
+      <div class="story-hero" id="national-summary">
+        <p class="story-loading">Cargando resumen...</p>
+      </div>
+
+      <div class="story-focus-grid" id="story-focus-grid" aria-label="Focos ejecutivos">
+      </div>
     </section>
 
-    <div id="table-status" class="table-status" hidden></div>
+    <section class="operations-section" aria-label="Detalle operativo por entidad">
+      <div class="operations-header">
+        <div>
+          <p class="section-kicker">Detalle bajo demanda</p>
+          <h2>Tabla operativa por entidad</h2>
+        </div>
+        <div class="quick-filters" id="quick-filters" aria-label="Filtros rapidos">
+          <button type="button" class="filter-chip is-active" data-filter="all">Todos</button>
+          <button type="button" class="filter-chip" data-filter="pending">Sin enviar</button>
+          <button type="button" class="filter-chip" data-filter="sent">Enviados</button>
+          <button type="button" class="filter-chip" data-filter="observations">Con observaciones</button>
+        </div>
+      </div>
 
-    <div class="table-wrap">
-      <table class="unidades-table sortable-table" id="resumen-table">
-        <thead>
-          <tr>
-            <th data-sort="estado">Entidad</th>
-            <th data-sort="total">Total</th>
-            <th data-sort="capturadas">Capturadas</th>
-            <th data-sort="porcentaje">% Avance</th>
-            <th data-sort="incluidas">Incluyen</th>
-            <th data-sort="excluidas">Excluyen</th>
-            <th data-sort="ratificadas">Ratifican</th>
-            <th data-sort="manuales">Sin CLUES</th>
-            <th data-sort="ultimoEnvio">Último envío</th>
-          </tr>
-        </thead>
-        <tbody id="resumen-tbody">
-        </tbody>
-      </table>
-    </div>
+      <div id="table-status" class="table-status" hidden></div>
+
+      <div class="table-wrap">
+        <table class="unidades-table sortable-table" id="resumen-table">
+          <thead>
+            <tr>
+              <th data-sort="estado">Entidad</th>
+              <th data-sort="total">Total</th>
+              <th data-sort="capturadas">Capturadas</th>
+              <th data-sort="porcentaje">% Avance</th>
+              <th data-sort="incluidas">Incluyen</th>
+              <th data-sort="excluidas">Excluyen</th>
+              <th data-sort="ratificadas">Ratifican</th>
+              <th data-sort="manuales">Sin CLUES</th>
+              <th data-sort="ultimoEnvio">Último envío</th>
+            </tr>
+          </thead>
+          <tbody id="resumen-tbody">
+          </tbody>
+        </table>
+      </div>
+    </section>
   </main>
 
   <script src="js/control-panel.js"></script>
