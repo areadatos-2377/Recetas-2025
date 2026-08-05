@@ -589,6 +589,13 @@
       return;
     }
 
+    if (!payload.observaciones || !payload.observaciones.trim()) {
+      addUnitError.hidden = false;
+      addUnitError.textContent = 'Las observaciones son obligatorias.';
+      if (observacionesInput) observacionesInput.focus();
+      return;
+    }
+
     addUnitSubmitBtn.disabled = true;
     addUnitSubmitBtn.textContent = 'Agregando…';
 

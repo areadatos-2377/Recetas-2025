@@ -82,8 +82,12 @@ router.post('/unidades', requireAuth, async (req, res, next) => {
     const body = req.body || {};
 
     const nombreUnidad = trimmedOrNull(body.nombre_unidad);
+    const observaciones = trimmedOrNull(body.observaciones);
     if (!nombreUnidad) {
       return res.status(400).json({ error: 'El nombre de la unidad es obligatorio' });
+    }
+    if (!observaciones) {
+      return res.status(400).json({ error: 'Las observaciones son obligatorias' });
     }
 
     if (body.tipo_unidad !== undefined && body.tipo_unidad !== null && !TIPO_UNIDAD_VALUES.includes(body.tipo_unidad)) {
@@ -137,7 +141,7 @@ router.post('/unidades', requireAuth, async (req, res, next) => {
           textFields.clues,
           body.tipo_unidad ?? null,
           body.condicion_unidad ?? null,
-          typeof body.observaciones === 'string' ? body.observaciones : null,
+          observaciones,
           textFields.nivel_atencion,
           textFields.nombre_tipo_establecimiento,
           textFields.propiedad_inmueble,
