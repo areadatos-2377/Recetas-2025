@@ -33,7 +33,10 @@ router.post('/enviar', requireAuth, async (req, res, next) => {
     try {
       uploadResult = await uploadToDrive(fileName, buffer);
     } catch (err) {
-      return res.status(502).json({ error: `Error al subir a Drive: ${err.message}` });
+      // El detalle tecnico queda en los logs del servidor para diagnostico;
+      // al usuario se le da un mensaje simple y accionable, sin jerga.
+      console.error('Error al subir a Drive:', err);
+      return res.status(502).json({ error: 'No se pudo subir el archivo a Google Drive. Intenta de nuevo en unos segundos.' });
     }
 
     const { rows: submissionRows } = await pool.query(
