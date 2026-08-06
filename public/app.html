@@ -90,8 +90,8 @@
   <!-- Modal para agregar una unidad todavia sin CLUES asignado -->
   <div id="add-unit-modal" class="modal-overlay" hidden>
     <div class="modal-box modal-box-wide" role="dialog" aria-modal="true" aria-labelledby="add-unit-modal-title">
-      <h2 id="add-unit-modal-title">Agregar unidad sin CLUES</h2>
-      <p class="modal-subtitle">Captura los datos de una unidad que todavía no tiene CLUES asignado por la autoridad. Podrás corregirlos o agregar el CLUES más adelante.</p>
+      <h2 id="add-unit-modal-title">Agregar unidad</h2>
+      <p class="modal-subtitle">Captura los datos de una unidad. Podrás corregirlos o agregar el CLUES más adelante.</p>
       <form id="add-unit-form" novalidate>
         <div id="add-unit-error" class="alert alert-error" role="alert" hidden></div>
         <div class="add-unit-grid">
@@ -103,7 +103,7 @@
           </div>
           <div class="field field-wide">
             <label for="add-clues">CLUES (opcional)</label>
-            <input type="text" id="add-clues" name="clues" placeholder="Puedes usar un identificador provisional; no tiene que seguir el formato oficial">
+            <input type="text" id="add-clues" name="clues" placeholder="">
           </div>
           <div class="field">
             <label for="add-nombre_tipo_establecimiento">Nombre tipo establecimiento</label>

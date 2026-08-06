@@ -276,7 +276,7 @@
         editableFields += editableFieldHtml(f.label, f.field, id, u[f.field]);
       }
       infoHtml =
-        '<p class="manual-unit-note">Unidad agregada manualmente (sin CLUES del padrón oficial). Puedes corregir estos datos cuando haga falta.</p>' +
+        '<p class="manual-unit-note">Unidad agregada manualmente. Puedes corregir estos datos cuando haga falta.</p>' +
         '<div class="detail-grid">' + editableFields + '</div>';
     } else {
       var infoFields =
