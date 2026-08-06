@@ -100,7 +100,7 @@
   }
 
   function isCapturada(u) {
-    return !!(u.tipo_unidad && u.condicion_unidad && hasText(u.observaciones));
+    return !!(u.condicion_unidad && hasText(u.observaciones));
   }
 
   function findUnidad(id) {
@@ -297,17 +297,6 @@
       infoHtml = '<div class="detail-grid">' + infoFields + '</div>';
     }
 
-    var tipoUnidadRadios = radioGroupHtml(
-      'tipo_unidad-' + id,
-      'tipo_unidad',
-      id,
-      [
-        { value: 'FIJA', label: 'Fija' },
-        { value: 'MOVIL', label: 'Móvil' },
-      ],
-      u.tipo_unidad
-    );
-
     var condicionRadios = radioGroupHtml('condicion_unidad-' + id, 'condicion_unidad', id, CONDICION_OPTIONS, u.condicion_unidad);
 
     return (
@@ -316,10 +305,6 @@
       '<div class="detail-panel">' +
       infoHtml +
       '<div class="capture-form">' +
-      '<div class="form-group">' +
-      '<span class="form-label">Tipo de unidad</span>' +
-      tipoUnidadRadios +
-      '</div>' +
       '<div class="form-group">' +
       '<span class="form-label">' + escapeHtml(CONDICION_LABEL_TEXT) + '</span>' +
       condicionRadios +
@@ -389,7 +374,7 @@
   function updateRowVisualsAfterSave(id, field, value) {
     var row = tablesContainer.querySelector('tr.unidad-row[data-id="' + id + '"]');
     if (!row) return;
-    if (field === 'tipo_unidad' || field === 'condicion_unidad' || field === 'observaciones') {
+    if (field === 'condicion_unidad' || field === 'observaciones') {
       var unidad = findUnidad(id);
       var cell = row.querySelector('.col-estatus');
       if (cell && unidad) cell.innerHTML = statusBadgeHtml(unidad);
@@ -443,9 +428,7 @@
 
   tablesContainer.addEventListener('change', function (event) {
     var el = event.target;
-    if (el.matches('input[type="radio"][data-field="tipo_unidad"]')) {
-      saveField(Number(el.getAttribute('data-id')), 'tipo_unidad', el.value);
-    } else if (el.matches('input[type="radio"][data-field="condicion_unidad"]')) {
+    if (el.matches('input[type="radio"][data-field="condicion_unidad"]')) {
       saveField(Number(el.getAttribute('data-id')), 'condicion_unidad', el.value);
     }
   });
@@ -675,9 +658,6 @@
       var input = addUnitForm.querySelector('[name="' + field + '"]');
       payload[field] = input ? input.value : '';
     }
-
-    var checkedTipo = addUnitForm.querySelector('input[name="tipo_unidad"]:checked');
-    payload.tipo_unidad = checkedTipo ? checkedTipo.value : null;
 
     var checkedCondicion = addUnitForm.querySelector('input[name="condicion_unidad"]:checked');
     payload.condicion_unidad = checkedCondicion ? checkedCondicion.value : null;

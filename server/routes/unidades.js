@@ -97,8 +97,7 @@ router.get('/progreso', requireAuth, async (req, res, next) => {
       `SELECT
          COUNT(*)::int AS total,
          COUNT(*) FILTER (
-           WHERE tipo_unidad IS NOT NULL
-             AND condicion_unidad IS NOT NULL
+           WHERE condicion_unidad IS NOT NULL
              AND observaciones IS NOT NULL
              AND btrim(observaciones) <> ''
          )::int AS capturadas
