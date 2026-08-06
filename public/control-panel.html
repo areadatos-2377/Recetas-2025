@@ -4,32 +4,28 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
-<title>Reporte narrativo de avance nacional</title>
+<title>Avance nacional</title>
 <link rel="stylesheet" href="css/styles.css">
 </head>
-<body class="app-body">
-  <header class="app-header">
-    <div class="app-header-title">
-      <h1>Reporte nacional</h1>
-    </div>
-    <button type="button" id="logout-btn" class="btn btn-secondary">Cerrar sesión</button>
+<body class="report-page">
+  <header class="report-header">
+    <div class="report-brand">Modificación al Anexo 1 del Convenio de Coordinación</div>
+    <button type="button" id="logout-btn" class="report-logout">Cerrar sesión</button>
   </header>
 
-  <main class="app-main">
-    <section class="story-report" aria-label="Reporte narrativo de avance nacional">
-      <div class="story-hero" id="national-summary">
-        <p class="story-loading">Cargando resumen...</p>
-      </div>
+  <main class="report-body">
+    <section class="hero" id="national-summary" aria-label="Resumen nacional">
+      <p class="hero-loading">Cargando resumen…</p>
+    </section>
 
-      <div class="story-focus-grid" id="story-focus-grid" aria-label="Focos ejecutivos">
-      </div>
+    <section class="insights-grid" id="story-focus-grid" aria-label="Focos ejecutivos">
     </section>
 
     <section class="operations-section" aria-label="Detalle operativo por entidad">
       <div class="operations-header">
         <div>
-          <p class="section-kicker">Detalle bajo demanda</p>
-          <h2>Tabla operativa por entidad</h2>
+          <p class="eyebrow">Detalle bajo demanda</p>
+          <h2>Las 25 entidades, de menor a mayor avance</h2>
         </div>
         <div class="quick-filters" id="quick-filters" aria-label="Filtros rapidos">
           <button type="button" class="filter-chip is-active" data-filter="all">Todos</button>
@@ -41,8 +37,8 @@
 
       <div id="table-status" class="table-status" hidden></div>
 
-      <div class="table-wrap">
-        <table class="unidades-table sortable-table" id="resumen-table">
+      <div class="table-scroll">
+        <table class="report-table sortable-table" id="resumen-table">
           <thead>
             <tr>
               <th data-sort="estado">Entidad</th>

@@ -64,17 +64,6 @@
     return (row.incluidas || 0) + (row.excluidas || 0) + (row.manuales || 0);
   }
 
-  function getGlobalStatus(pct, enviaron, totalEntidades) {
-    var participation = totalEntidades > 0 ? enviaron / totalEntidades : 0;
-    if (pct >= 80 && participation >= 0.8) {
-      return { label: 'Estado: En ruta', className: 'status-ok' };
-    }
-    if (pct >= 35 || participation >= 0.45) {
-      return { label: 'Estado: Requiere impulso', className: 'status-watch' };
-    }
-    return { label: 'Estado: Critico', className: 'status-critical' };
-  }
-
   function topRows(list, count, scoreFn) {
     return list
       .slice()
@@ -116,13 +105,34 @@
     );
   }
 
-  function renderFileChip(envio) {
-    var fileName = envio.archivoNombre || 'Archivo enviado';
-    var fileUrl = envio.archivoUrl || envio.descargaUrl || envio.url;
-    if (fileUrl) {
-      return '<a class="file-chip" href="' + escapeHtml(fileUrl) + '" title="Descargar ' + escapeHtml(fileName) + '" download>XLSX</a>';
+  // Ranking en barras horizontales (magnitud de unidades pendientes por
+  // entidad), a diferencia de renderEntityList que solo compara texto.
+  function renderRankList(list, maxValue, emptyText) {
+    if (list.length === 0) {
+      return '<p class="focus-empty">' + escapeHtml(emptyText) + '</p>';
     }
-    return '<span class="file-chip file-chip-static" title="' + escapeHtml(fileName) + '">XLSX</span>';
+    return (
+      '<div class="rank-list">' +
+      list
+        .map(function (r) {
+          var value = r.total - r.capturadas;
+          var width = maxValue > 0 ? Math.max(4, Math.round((value / maxValue) * 100)) : 0;
+          return (
+            '<div class="rank-row-wrap">' +
+            '<div class="rank-top"><span>' + escapeHtml(r.estado) + '</span><strong>' + pluralize(value, 'pendiente', 'pendientes') + '</strong></div>' +
+            '<div class="track"><div class="fill" style="width:' + width + '%"></div></div>' +
+            '</div>'
+          );
+        })
+        .join('') +
+      '</div>'
+    );
+  }
+
+  function renderFileLink(envio) {
+    var fileUrl = envio.archivoUrl || envio.descargaUrl || envio.url;
+    if (!fileUrl) return '';
+    return '<a class="file-link" href="' + escapeHtml(fileUrl) + '" target="_blank" rel="noopener noreferrer">Ver archivo</a>';
   }
 
   logoutBtn.addEventListener('click', function () {
@@ -155,50 +165,57 @@
       if (r.ultimoEnvio) enviaron++;
     });
     var pct = total > 0 ? Math.round((capturadas / total) * 1000) / 10 : 0;
-    var status = getGlobalStatus(pct, enviaron, rows.length);
+    var pctText = pct % 1 === 0 ? String(Math.round(pct)) : pct.toFixed(1);
     var pendientes = rows.length - enviaron;
+
     var pendingRows = rows.filter(function (r) {
       return !r.ultimoEnvio;
     });
-    var riskRows = topRows(pendingRows, 3, function (r) {
+    var riskRows = topRows(pendingRows, 5, function (r) {
       return r.total - r.capturadas;
     });
-    var activeRows = latestSentRows(3);
-    var observationRows = topRows(rows, 3, validationCount);
+    var maxPendiente = riskRows.length > 0 ? (riskRows[0].total - riskRows[0].capturadas) : 0;
+    var activeRows = latestSentRows(4);
+    var observationRows = topRows(rows, 4, validationCount);
+
     var headline =
       enviaron === 0
-        ? 'Ninguna entidad ha iniciado reporte'
-        : 'Solo ' + enviaron + ' de ' + rows.length + ' entidades han iniciado reporte';
-    var pctText = pct % 1 === 0 ? String(Math.round(pct)) : pct.toFixed(1);
+        ? 'El levantamiento del padrón todavía no arranca en ninguna entidad'
+        : (enviaron === rows.length
+          ? 'Las ' + rows.length + ' entidades ya iniciaron su reporte'
+          : 'Solo ' + enviaron + ' de ' + rows.length + ' entidades han iniciado su reporte');
+
+    var hoy = new Date().toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City', day: 'numeric', month: 'long', year: 'numeric' });
 
     nationalSummaryEl.innerHTML =
-      '<div class="story-hero-copy">' +
-      '<span class="state-pill ' + status.className + '">' + status.label + '</span>' +
-      '<h2>' + escapeHtml(headline) + '</h2>' +
+      '<p class="eyebrow">Avance nacional · corte al ' + escapeHtml(hoy) + '</p>' +
+      '<h1>' + escapeHtml(headline) + '</h1>' +
       '<p>Se han capturado <strong>' + formatNumber(capturadas) + '</strong> de <strong>' + formatNumber(total) + '</strong> unidades a nivel nacional. El avance acumulado es de <strong>' + pctText + '%</strong>.</p>' +
-      '</div>' +
-      '<div class="story-hero-meter" aria-label="Avance nacional">' +
-      '<div class="meter-value">' + pctText + '%</div>' +
-      '<div class="progress-bar-track"><div class="progress-bar-fill" style="width:' + Math.min(100, pct) + '%"></div></div>' +
-      '<div class="meter-meta"><span>' + formatNumber(capturadas) + ' capturadas</span><span>' + formatNumber(total - capturadas) + ' pendientes</span></div>' +
+      '<div class="stat-row">' +
+      '<div class="stat"><b>' + pctText + '%</b><span>avance nacional</span></div>' +
+      '<div class="stat"><b>' + formatNumber(capturadas) + '</b><span>unidades capturadas</span></div>' +
+      '<div class="stat"><b>' + enviaron + ' / ' + rows.length + '</b><span>entidades con envío registrado</span></div>' +
       '</div>';
 
     focusGridEl.innerHTML =
-      '<article class="focus-card focus-risk">' +
-      '<div class="focus-card-head"><span>Zona de mayor riesgo</span><small>Requiere seguimiento</small></div>' +
-      '<p class="focus-card-copy">' + pendientes + ' entidades siguen sin enviar. Prioridad por volumen pendiente:</p>' +
-      renderEntityList(riskRows, function (r) { return pluralize(r.total - r.capturadas, 'pendiente', 'pendientes'); }, 'No hay entidades pendientes.') +
-      '</article>' +
-      '<article class="focus-card focus-active">' +
-      '<div class="focus-card-head"><span>Entidades activas</span><small>Cumplimiento reciente</small></div>' +
-      '<p class="focus-card-copy">' + enviaron + ' entidades ya registraron al menos un envio.</p>' +
-      renderEntityList(activeRows, function (r) { return formatFecha(r.ultimoEnvio.creadoEn); }, 'Todavia no hay envios confirmados.') +
-      '</article>' +
-      '<article class="focus-card focus-validation">' +
-      '<div class="focus-card-head"><span>Hallazgos de validacion</span><small>Revision operativa</small></div>' +
-      '<p class="focus-card-copy">' + formatNumber(observaciones) + ' registros requieren lectura por incluir, excluir o no contar con CLUES.</p>' +
+      '<div class="insight-col">' +
+      '<p class="eyebrow">Mayor volumen pendiente</p>' +
+      '<h3>Dónde concentrar el seguimiento</h3>' +
+      '<p class="insight-col-copy">' + pluralize(pendientes, 'entidad sigue', 'entidades siguen') + ' sin enviar. Prioridad por volumen pendiente:</p>' +
+      renderRankList(riskRows, maxPendiente, 'No hay entidades pendientes.') +
+      '</div>' +
+      '<div class="insight-col">' +
+      '<p class="eyebrow">Entidades activas</p>' +
+      '<h3>Cumplimiento reciente</h3>' +
+      '<p class="insight-col-copy">' + pluralize(enviaron, 'entidad ya registró', 'entidades ya registraron') + ' al menos un envío.</p>' +
+      renderEntityList(activeRows, function (r) { return formatFecha(r.ultimoEnvio.creadoEn); }, 'Todavía no hay envíos confirmados.') +
+      '</div>' +
+      '<div class="insight-col">' +
+      '<p class="eyebrow">Hallazgos de validación</p>' +
+      '<h3>Revisión operativa</h3>' +
+      '<p class="insight-col-copy">' + pluralize(observaciones, 'registro requiere', 'registros requieren') + ' lectura por incluir, excluir o no contar con CLUES.</p>' +
       renderEntityList(observationRows, function (r) { return pluralize(validationCount(r), 'hallazgo', 'hallazgos'); }, 'No hay hallazgos acumulados.') +
-      '</article>';
+      '</div>';
 
     updateFilterLabels();
   }
@@ -219,20 +236,22 @@
 
   function rowHtml(r) {
     var pct = progressPercent(r);
+    var pctClass = pct >= 60 ? 'pct-good' : 'pct-risk';
     var ultimo = r.ultimoEnvio
-      ? '<span class="send-pill send-pill-ok">Enviado</span><span class="send-date">' + escapeHtml(formatFecha(r.ultimoEnvio.creadoEn)) + '</span>' +
-        renderFileChip(r.ultimoEnvio)
-      : '<span class="send-pill send-pill-pending">Sin enviar</span>';
+      ? '<span class="chip chip-sent">Enviado</span>' +
+        '<span class="send-date">' + escapeHtml(formatFecha(r.ultimoEnvio.creadoEn)) + '</span>' +
+        renderFileLink(r.ultimoEnvio)
+      : '<span class="chip chip-pending">Sin enviar</span>';
     return (
       '<tr>' +
       '<td>' + escapeHtml(r.estado) + '</td>' +
-      '<td>' + formatNumber(r.total) + '</td>' +
-      '<td>' + formatNumber(r.capturadas) + '</td>' +
-      '<td><div class="table-progress-cell"><span>' + pct + '%</span><div class="mini-progress-track"><div class="mini-progress-fill" style="width:' + pct + '%"></div></div></div></td>' +
-      '<td>' + formatNumber(r.incluidas) + '</td>' +
-      '<td>' + formatNumber(r.excluidas) + '</td>' +
-      '<td>' + formatNumber(r.ratificadas) + '</td>' +
-      '<td>' + formatNumber(r.manuales) + '</td>' +
+      '<td class="num">' + formatNumber(r.total) + '</td>' +
+      '<td class="num">' + formatNumber(r.capturadas) + '</td>' +
+      '<td class="num ' + pctClass + '">' + pct + '%</td>' +
+      '<td class="num">' + formatNumber(r.incluidas) + '</td>' +
+      '<td class="num">' + formatNumber(r.excluidas) + '</td>' +
+      '<td class="num">' + formatNumber(r.ratificadas) + '</td>' +
+      '<td class="num">' + formatNumber(r.manuales) + '</td>' +
       '<td>' + ultimo + '</td>' +
       '</tr>'
     );
