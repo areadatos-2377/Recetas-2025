@@ -8,6 +8,7 @@ const TIPO_UNIDAD_VALUES = ['FIJA', 'MOVIL'];
 const CONDICION_UNIDAD_VALUES = ['SE_RATIFICA', 'SE_INCLUYE', 'SE_EXCLUYE'];
 const OBSERVACIONES_MAX_LEN = 5000;
 const TEXT_FIELD_MAX_LEN = 300;
+const CLUES_MAX_LEN = 11;
 
 // Editables en cualquier unidad, venga o no del padron oficial.
 const UNIVERSAL_FIELDS = ['tipo_unidad', 'condicion_unidad', 'observaciones'];
@@ -140,8 +141,9 @@ router.post('/unidades', requireAuth, async (req, res, next) => {
       if (value === undefined) {
         return res.status(400).json({ error: `${field} invalido` });
       }
-      if (value && value.length > TEXT_FIELD_MAX_LEN) {
-        return res.status(400).json({ error: `${field} demasiado largo (max. ${TEXT_FIELD_MAX_LEN} caracteres)` });
+      const maxLen = field === 'clues' ? CLUES_MAX_LEN : TEXT_FIELD_MAX_LEN;
+      if (value && value.length > maxLen) {
+        return res.status(400).json({ error: `${field} demasiado largo (max. ${maxLen} caracteres)` });
       }
       textFields[field] = value;
     }
@@ -267,12 +269,13 @@ router.put('/unidades/:id', requireAuth, async (req, res, next) => {
     if (origenManual) {
       for (const field of MANUAL_ONLY_FIELDS) {
         if (body[field] === undefined) continue;
-        const value = field === 'clues' ? trimmedOrNull(body[field]) : trimmedOrNull(body[field]);
+        const value = trimmedOrNull(body[field]);
         if (value === undefined) {
           return res.status(400).json({ error: `${field} invalido` });
         }
-        if (value && value.length > TEXT_FIELD_MAX_LEN) {
-          return res.status(400).json({ error: `${field} demasiado largo (max. ${TEXT_FIELD_MAX_LEN} caracteres)` });
+        const maxLen = field === 'clues' ? CLUES_MAX_LEN : TEXT_FIELD_MAX_LEN;
+        if (value && value.length > maxLen) {
+          return res.status(400).json({ error: `${field} demasiado largo (max. ${maxLen} caracteres)` });
         }
         params.push(value);
         setClauses.push(`${field} = $${params.length}`);

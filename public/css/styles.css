@@ -149,6 +149,20 @@ button {
   font-size: 0.9rem;
 }
 
+.login-manual-link {
+  display: block;
+  text-align: center;
+  margin-top: 1.25rem;
+  color: var(--color-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.login-manual-link:hover {
+  text-decoration: underline;
+}
+
 .field {
   margin-bottom: 1.1rem;
 }

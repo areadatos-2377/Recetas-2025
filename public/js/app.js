@@ -239,10 +239,11 @@
 
   function editableFieldHtml(label, field, id, value) {
     var inputId = 'field-' + field + '-' + id;
+    var maxlengthAttr = field === 'clues' ? ' maxlength="11"' : '';
     return (
       '<div class="field detail-editable-field">' +
       '<label for="' + inputId + '">' + escapeHtml(label) + '</label>' +
-      '<input type="text" id="' + inputId + '" data-field="' + field + '" data-id="' + id + '" ' +
+      '<input type="text" id="' + inputId + '" data-field="' + field + '" data-id="' + id + '"' + maxlengthAttr + ' ' +
       'value="' + escapeHtml(value || '') + '">' +
       '</div>'
     );
