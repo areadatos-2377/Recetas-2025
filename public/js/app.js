@@ -277,7 +277,10 @@
       }
       infoHtml =
         '<p class="manual-unit-note">Unidad agregada manualmente. Puedes corregir estos datos cuando haga falta.</p>' +
-        '<div class="detail-grid">' + editableFields + '</div>';
+        '<div class="detail-grid">' + editableFields + '</div>' +
+        '<div class="detail-actions">' +
+        '<button type="button" class="btn btn-danger btn-delete-unit" data-id="' + id + '">Eliminar unidad</button>' +
+        '</div>';
     } else {
       var infoFields =
         detailField('Nivel de atención', u.nivel_atencion) +
@@ -347,7 +350,48 @@
     tr.classList.add('row-expanded');
   }
 
+  function handleDeleteUnit(id) {
+    var unidad = findUnidad(id);
+    if (!unidad) return;
+    var nombre = unidad.nombre_unidad || 'esta unidad';
+    if (!window.confirm('¿Seguro que quieres eliminar "' + nombre + '"? Esta acción no se puede deshacer.')) {
+      return;
+    }
+    var btn = tablesContainer.querySelector('.btn-delete-unit[data-id="' + id + '"]');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Eliminando…';
+    }
+    fetch('/api/unidades/' + id, { method: 'DELETE', credentials: 'same-origin' })
+      .then(function (res) {
+        return res.json().then(function (data) {
+          return { ok: res.ok, data: data };
+        });
+      })
+      .then(function (result) {
+        if (!result.ok) {
+          throw new Error((result.data && result.data.error) || 'No se pudo eliminar la unidad.');
+        }
+        closeOpenDetail();
+        state.unidades = state.unidades.filter(function (u) { return u.id !== id; });
+        applyFilter(searchInput.value);
+        recomputeProgresoLocal();
+      })
+      .catch(function (err) {
+        setFeedback(id, err.message || 'Error al eliminar.', 'error');
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Eliminar unidad';
+        }
+      });
+  }
+
   tablesContainer.addEventListener('click', function (event) {
+    var deleteBtn = event.target.closest('.btn-delete-unit');
+    if (deleteBtn) {
+      handleDeleteUnit(Number(deleteBtn.getAttribute('data-id')));
+      return;
+    }
     var tr = event.target.closest('tr.unidad-row');
     if (!tr) return;
     toggleRow(tr, tr.getAttribute('data-id'));

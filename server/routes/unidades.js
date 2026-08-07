@@ -304,4 +304,28 @@ router.put('/unidades/:id', requireAuth, async (req, res, next) => {
   }
 });
 
+// Solo se pueden eliminar unidades agregadas a mano (origen_manual = true):
+// las del padron oficial nunca se borran desde la app.
+router.delete('/unidades/:id', requireAuth, async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ error: 'id invalido' });
+    }
+
+    const existing = await pool.query('SELECT origen_manual FROM unidades WHERE id = $1 AND estado = $2', [id, req.estado]);
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: 'Unidad no encontrada para esta entidad' });
+    }
+    if (!existing.rows[0].origen_manual) {
+      return res.status(400).json({ error: 'Solo se pueden eliminar unidades agregadas manualmente' });
+    }
+
+    await pool.query('DELETE FROM unidades WHERE id = $1 AND estado = $2', [id, req.estado]);
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

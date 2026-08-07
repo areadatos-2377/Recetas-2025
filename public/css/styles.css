@@ -8,8 +8,8 @@
   --color-border: #d6dee8;
   --color-text: #172033;
   --color-text-muted: #5b6672;
-  --color-primary: #174a7c;
-  --color-primary-dark: #10385f;
+  --color-primary: #0c786d;
+  --color-primary-dark: #05423f;
   --color-primary-contrast: #ffffff;
   --color-secondary: #eef1f5;
   --color-secondary-text: #33404e;
@@ -98,6 +98,16 @@ button {
 
 .btn-secondary:hover:not(:disabled) {
   background-color: #e2e7ed;
+}
+
+.btn-danger {
+  background-color: var(--color-error-bg);
+  color: var(--color-error);
+  border-color: rgba(179, 38, 30, 0.25);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background-color: #f7d9d6;
 }
 
 .btn-block {
@@ -898,6 +908,11 @@ tr.detail-row td {
   border-radius: var(--radius-sm);
   padding: 0.5em 0.75em;
   margin: 0;
+}
+
+.detail-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .detail-grid .field {
