@@ -685,6 +685,12 @@ button {
   transition: width 0.25s ease;
 }
 
+.capture-notice {
+  margin: 0.7rem 0 0;
+  font-size: 0.83rem;
+  color: var(--color-secondary-text);
+}
+
 /* -----------------------------------------------------------------
    Toolbar / buscador
    ----------------------------------------------------------------- */

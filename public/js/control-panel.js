@@ -178,12 +178,18 @@
     var activeRows = latestSentRows(4);
     var observationRows = topRows(rows, 4, validationCount);
 
-    var headline =
-      enviaron === 0
-        ? 'El levantamiento del padrón todavía no arranca en ninguna entidad'
-        : (enviaron === rows.length
-          ? 'Las ' + rows.length + ' entidades ya iniciaron su reporte'
-          : 'Solo ' + enviaron + ' de ' + rows.length + ' entidades han iniciado su reporte');
+    var entidadesConCaptura = rows.filter(function (r) { return r.capturadas > 0; }).length;
+
+    var headline;
+    if (capturadas === 0 && enviaron === 0) {
+      headline = 'El levantamiento del padrón todavía no arranca en ninguna entidad';
+    } else if (enviaron === rows.length) {
+      headline = 'Las ' + rows.length + ' entidades ya iniciaron su reporte';
+    } else if (enviaron > 0) {
+      headline = 'Solo ' + enviaron + ' de ' + rows.length + ' entidades han iniciado su reporte';
+    } else {
+      headline = entidadesConCaptura + ' de ' + rows.length + ' entidades ya están capturando información, pero ninguna ha enviado su reporte todavía';
+    }
 
     var hoy = new Date().toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City', day: 'numeric', month: 'long', year: 'numeric' });
 
