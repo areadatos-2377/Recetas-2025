@@ -25,7 +25,7 @@
       <div class="operations-header">
         <div>
           <p class="eyebrow">Detalle bajo demanda</p>
-          <h2>Las 25 entidades, de menor a mayor avance</h2>
+          <h2 id="operations-title">Las 25 entidades, de menor a mayor avance</h2>
         </div>
         <div class="quick-filters" id="quick-filters" aria-label="Filtros rapidos">
           <button type="button" class="filter-chip is-active" data-filter="all">Todos</button>
@@ -35,9 +35,19 @@
         </div>
       </div>
 
+      <div class="view-switcher" id="view-switcher" aria-label="Cambiar tipo de vista">
+        <button type="button" class="view-btn is-active" data-view="table">Tabla</button>
+        <button type="button" class="view-btn" data-view="pct-all">Avance %</button>
+        <button type="button" class="view-btn" data-view="abs-all">Avance en unidades</button>
+        <button type="button" class="view-btn" data-view="pending">Sin enviar</button>
+        <button type="button" class="view-btn" data-view="sent">Enviados</button>
+      </div>
+
       <div id="table-status" class="table-status" hidden></div>
 
-      <div class="table-scroll">
+      <div class="chart-container" id="chart-container" hidden></div>
+
+      <div class="table-scroll" id="table-scroll-wrap">
         <table class="report-table sortable-table" id="resumen-table">
           <thead>
             <tr>

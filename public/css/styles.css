@@ -150,17 +150,49 @@ button {
 }
 
 .login-manual-link {
-  display: block;
-  text-align: center;
-  margin-top: 1.25rem;
-  color: var(--color-primary);
-  font-size: 0.85rem;
-  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding: 0.75em 1em;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-secondary);
   text-decoration: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .login-manual-link:hover {
-  text-decoration: underline;
+  background: #e3f3f1;
+  border-color: var(--color-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(12, 120, 109, 0.16);
+}
+
+.login-manual-icon {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  color: var(--color-primary);
+}
+
+.login-manual-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  text-align: left;
+}
+
+.login-manual-text strong {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.login-manual-text small {
+  font-size: 0.76rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
 }
 
 .field {
@@ -283,6 +315,8 @@ button {
   --good-bg: #e6ece2;
   --risk: #a3392c;
   --risk-bg: #f5e0da;
+  --info: #3d5a73;
+  --info-bg: #dde6ea;
   --border: #e2dacb;
   --font-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
 
@@ -368,13 +402,31 @@ button {
   margin: 0;
 }
 
+.hero-progress {
+  margin-top: 2rem;
+  padding-top: 1.6rem;
+  border-top: 1px solid var(--border);
+}
+
+.hero-progress-track {
+  height: 10px;
+  border-radius: 999px;
+  background: #ece4d6;
+  overflow: hidden;
+}
+
+.hero-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent) 0%, #c96b4f 100%);
+  transition: width 0.3s ease;
+}
+
 .stat-row {
   display: flex;
   gap: 3rem;
   flex-wrap: wrap;
-  margin-top: 2rem;
-  padding-top: 1.6rem;
-  border-top: 1px solid var(--border);
+  margin-top: 1.4rem;
 }
 
 .stat-row .stat b {
@@ -548,6 +600,111 @@ button {
   background: var(--ink);
   border-color: var(--ink);
   color: var(--bg);
+}
+
+.quick-filters[hidden] {
+  display: none;
+}
+
+.view-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.view-btn {
+  min-height: 32px;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.view-btn:hover,
+.view-btn:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.view-btn.is-active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--bg);
+}
+
+.chart-container {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.chart-container[hidden] {
+  display: none;
+}
+
+.table-scroll[hidden] {
+  display: none;
+}
+
+.chart-bars {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.chart-bar-row {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.chart-bar-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.87rem;
+}
+
+.chart-bar-top span {
+  font-weight: 550;
+}
+
+.chart-bar-top strong {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.chart-bar-track {
+  height: 11px;
+  border-radius: 3px;
+  background: #ece4d6;
+  overflow: hidden;
+}
+
+.chart-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.chart-theme-accent .chart-bar-fill {
+  background: var(--accent);
+}
+
+.chart-theme-info .chart-bar-fill {
+  background: var(--info);
+}
+
+.chart-theme-risk .chart-bar-fill {
+  background: var(--risk);
+}
+
+.chart-theme-good .chart-bar-fill {
+  background: var(--good);
 }
 
 .report-page .table-status {

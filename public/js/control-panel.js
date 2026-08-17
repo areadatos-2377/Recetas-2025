@@ -8,11 +8,49 @@
   var tbody = document.getElementById('resumen-tbody');
   var table = document.getElementById('resumen-table');
   var quickFilters = document.getElementById('quick-filters');
+  var viewSwitcher = document.getElementById('view-switcher');
+  var chartContainerEl = document.getElementById('chart-container');
+  var tableScrollWrap = document.getElementById('table-scroll-wrap');
+  var operationsTitleEl = document.getElementById('operations-title');
 
   var rows = [];
   var sortKey = 'porcentaje';
   var sortDir = 'asc';
   var activeFilter = 'all';
+  var currentView = 'table';
+
+  var DEFAULT_TABLE_TITLE = 'Las 25 entidades, de menor a mayor avance';
+
+  var CHART_VIEWS = {
+    'pct-all': {
+      title: 'Avance porcentual por entidad',
+      theme: 'accent',
+      getList: function () { return sortDescByPct(rows); },
+      valueLabel: function (r) { return progressPercent(r) + '%'; },
+      emptyText: 'No hay datos todavía.',
+    },
+    'abs-all': {
+      title: 'Avance en unidades por entidad',
+      theme: 'info',
+      getList: function () { return sortDescByPct(rows); },
+      valueLabel: function (r) { return formatNumber(r.capturadas) + ' / ' + formatNumber(r.total); },
+      emptyText: 'No hay datos todavía.',
+    },
+    pending: {
+      title: 'Entidades sin enviar',
+      theme: 'risk',
+      getList: function () { return sortDescByPct(rows.filter(function (r) { return !r.ultimoEnvio; })); },
+      valueLabel: function (r) { return formatNumber(r.capturadas) + ' / ' + formatNumber(r.total); },
+      emptyText: 'Todas las entidades ya enviaron su reporte.',
+    },
+    sent: {
+      title: 'Entidades que ya enviaron',
+      theme: 'good',
+      getList: function () { return sortDescByPct(rows.filter(function (r) { return !!r.ultimoEnvio; })); },
+      valueLabel: function (r) { return formatNumber(r.capturadas) + ' / ' + formatNumber(r.total); },
+      emptyText: 'Todavía no hay envíos registrados.',
+    },
+  };
 
   function goToLogin() {
     window.location.href = 'control-login.html';
@@ -129,6 +167,65 @@
     );
   }
 
+  function sortDescByPct(list) {
+    return list.slice().sort(function (a, b) { return progressPercent(b) - progressPercent(a); });
+  }
+
+  // Barras de avance por entidad para las vistas de grafico (una entidad
+  // por fila, ancho de barra = % de avance de esa entidad).
+  function renderBarChart(list, cfg) {
+    if (list.length === 0) {
+      return '<p class="focus-empty">' + escapeHtml(cfg.emptyText) + '</p>';
+    }
+    return (
+      '<div class="chart-bars chart-theme-' + cfg.theme + '">' +
+      list
+        .map(function (r) {
+          var pct = progressPercent(r);
+          return (
+            '<div class="chart-bar-row">' +
+            '<div class="chart-bar-top"><span>' + escapeHtml(r.estado) + '</span><strong>' + escapeHtml(cfg.valueLabel(r)) + '</strong></div>' +
+            '<div class="chart-bar-track"><div class="chart-bar-fill" style="width:' + pct + '%"></div></div>' +
+            '</div>'
+          );
+        })
+        .join('') +
+      '</div>'
+    );
+  }
+
+  function renderChart(viewKey) {
+    var cfg = CHART_VIEWS[viewKey];
+    chartContainerEl.innerHTML = renderBarChart(cfg.getList(), cfg);
+  }
+
+  function applyView(view) {
+    currentView = view;
+    viewSwitcher.querySelectorAll('[data-view]').forEach(function (btn) {
+      btn.classList.toggle('is-active', btn.getAttribute('data-view') === view);
+    });
+    quickFilters.hidden = view !== 'table';
+
+    if (view === 'table') {
+      chartContainerEl.hidden = true;
+      tableScrollWrap.hidden = false;
+      operationsTitleEl.textContent = DEFAULT_TABLE_TITLE;
+      render();
+    } else {
+      tableScrollWrap.hidden = true;
+      tableStatusEl.hidden = true;
+      chartContainerEl.hidden = false;
+      operationsTitleEl.textContent = CHART_VIEWS[view].title;
+      renderChart(view);
+    }
+  }
+
+  viewSwitcher.addEventListener('click', function (event) {
+    var btn = event.target.closest('[data-view]');
+    if (!btn) return;
+    applyView(btn.getAttribute('data-view'));
+  });
+
   function renderFileLink(envio) {
     var fileUrl = envio.archivoUrl || envio.descargaUrl || envio.url;
     if (!fileUrl) return '';
@@ -197,6 +294,9 @@
       '<p class="eyebrow">Avance nacional · corte al ' + escapeHtml(hoy) + '</p>' +
       '<h1>' + escapeHtml(headline) + '</h1>' +
       '<p>Se han capturado <strong>' + formatNumber(capturadas) + '</strong> de <strong>' + formatNumber(total) + '</strong> unidades a nivel nacional. El avance acumulado es de <strong>' + pctText + '%</strong>.</p>' +
+      '<div class="hero-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pctText + '">' +
+      '<div class="hero-progress-track"><div class="hero-progress-fill" style="width:' + pct + '%"></div></div>' +
+      '</div>' +
       '<div class="stat-row">' +
       '<div class="stat"><b>' + pctText + '%</b><span>avance nacional</span></div>' +
       '<div class="stat"><b>' + formatNumber(capturadas) + '</b><span>unidades capturadas</span></div>' +
@@ -336,7 +436,7 @@
       .then(function (data) {
         rows = data.resumen || [];
         renderNationalSummary();
-        render();
+        applyView(currentView);
       })
       .catch(function (err) {
         if (err.message === 'no-session') return;
