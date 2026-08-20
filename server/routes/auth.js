@@ -17,11 +17,16 @@ const loginLimiter = rateLimit({
   message: { error: 'Demasiados intentos. Intenta de nuevo mas tarde.' },
 });
 
-// Lista publica de entidades para poblar el selector de la pantalla de login.
+// Lista publica de entidades/unidades para poblar el selector de login.
 router.get('/estados', async (req, res, next) => {
   try {
-    const { rows } = await pool.query('SELECT estado FROM entidades_auth ORDER BY estado');
-    res.json({ estados: rows.map((r) => r.estado) });
+    const { rows } = await pool.query(
+      `SELECT estado AS clave, COALESCE(nombre, estado) AS nombre,
+              CASE WHEN clues IS NOT NULL THEN 'unidad' ELSE 'estado' END AS tipo
+       FROM entidades_auth
+       ORDER BY tipo, nombre`
+    );
+    res.json({ estados: rows });
   } catch (err) {
     next(err);
   }
@@ -35,7 +40,7 @@ router.post('/login', loginLimiter, async (req, res, next) => {
     }
 
     const { rows } = await pool.query(
-      'SELECT estado, password_hash FROM entidades_auth WHERE estado = $1',
+      'SELECT estado, password_hash, estado_real, clues, nombre FROM entidades_auth WHERE estado = $1',
       [estado]
     );
 
@@ -48,7 +53,11 @@ router.post('/login', loginLimiter, async (req, res, next) => {
       return res.status(401).json({ error: 'Entidad o contrasena incorrecta' });
     }
 
-    const token = jwt.sign({ estado: rows[0].estado }, process.env.JWT_SECRET, {
+    const estadoReal = rows[0].estado_real || rows[0].estado;
+    const clues = rows[0].clues || null;
+    const label = rows[0].nombre || rows[0].estado;
+
+    const token = jwt.sign({ estado: estadoReal, clues, label }, process.env.JWT_SECRET, {
       expiresIn: `${SESSION_HOURS}h`,
     });
 
@@ -59,7 +68,7 @@ router.post('/login', loginLimiter, async (req, res, next) => {
       maxAge: SESSION_HOURS * 60 * 60 * 1000,
     });
 
-    res.json({ ok: true, estado: rows[0].estado });
+    res.json({ ok: true, estado: estadoReal, clues, label });
   } catch (err) {
     next(err);
   }
@@ -77,7 +86,7 @@ router.get('/me', (req, res) => {
   }
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    res.json({ estado: payload.estado });
+    res.json({ estado: payload.estado, clues: payload.clues || null, label: payload.label || payload.estado });
   } catch (err) {
     res.status(401).json({ error: 'Sesion invalida o expirada' });
   }

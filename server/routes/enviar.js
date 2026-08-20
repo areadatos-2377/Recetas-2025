@@ -8,6 +8,10 @@ const router = express.Router();
 
 router.post('/enviar', requireAuth, async (req, res, next) => {
   try {
+    if (req.clues) {
+      return res.status(403).json({ error: 'Tu acceso esta limitado a tu propia unidad; el envio final lo hace tu entidad federativa.' });
+    }
+
     const { rows: unidades } = await pool.query(
       `SELECT clues, estado, tipo_unidad, condicion_unidad, nivel_atencion,
               nombre_tipo_establecimiento, propiedad_inmueble, nombre_tipologia,

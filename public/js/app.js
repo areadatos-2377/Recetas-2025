@@ -6,6 +6,8 @@
   // ---------------------------------------------------------------------
   var state = {
     estado: null,
+    clues: null,         // si no es null, la sesion esta limitada a una sola unidad
+    label: null,
     unidades: [],       // lista completa devuelta por /api/unidades
     filtered: [],        // subconjunto visible según el buscador
     total: 0,
@@ -59,6 +61,8 @@
   var manualTbody = document.getElementById('unidades-manual-tbody');
   var enviarBtn = document.getElementById('enviar-btn');
   var addUnitBtn = document.getElementById('add-unit-btn');
+  var captureNoticeEl = document.getElementById('capture-notice');
+  var manualUnitsSectionEl = document.getElementById('manual-units-section');
 
   var confirmModal = document.getElementById('confirm-modal');
   var confirmModalBody = document.getElementById('confirm-modal-body');
@@ -128,6 +132,19 @@
       }
       return res.json();
     });
+  }
+
+  // Las cuentas de una sola unidad (login por CLUES) solo pueden capturar
+  // su propia unidad: no agregan unidades nuevas ni hacen el envio final,
+  // eso lo sigue haciendo la entidad federativa completa.
+  function applyScopeRestrictions(clues) {
+    if (!clues) return;
+    addUnitBtn.hidden = true;
+    enviarBtn.hidden = true;
+    if (manualUnitsSectionEl) manualUnitsSectionEl.hidden = true;
+    if (captureNoticeEl) {
+      captureNoticeEl.innerHTML = 'Tu acceso está limitado a tu propia unidad. Lo que captures se guarda automáticamente; tu entidad federativa se encarga del envío final ante la autoridad.';
+    }
   }
 
   logoutBtn.addEventListener('click', function () {
@@ -562,9 +579,9 @@
       })
       .then(function (data) {
         state.estado = data.estado;
+        state.clues = data.clues || null;
         state.unidades = data.unidades || [];
         state.filtered = state.unidades;
-        estadoNombreEl.textContent = state.estado || '—';
         renderAll();
       })
       .catch(function (err) {
@@ -839,7 +856,10 @@
   checkSession()
     .then(function (me) {
       if (me && me.estado) {
-        estadoNombreEl.textContent = me.estado;
+        state.label = me.label || me.estado;
+        state.clues = me.clues || null;
+        estadoNombreEl.textContent = state.label;
+        applyScopeRestrictions(state.clues);
       }
       return Promise.all([loadUnidades(), loadProgreso()]);
     })

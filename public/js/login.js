@@ -29,20 +29,32 @@
         return res.json();
       })
       .then(function (data) {
-        var estados = (data && data.estados) || [];
+        var opciones = (data && data.estados) || [];
         estadoSelect.innerHTML = '';
 
         var placeholder = document.createElement('option');
         placeholder.value = '';
-        placeholder.textContent = 'Selecciona tu entidad';
+        placeholder.textContent = 'Selecciona tu entidad o unidad';
         estadoSelect.appendChild(placeholder);
 
-        estados.forEach(function (estado) {
+        var estadosGroup = document.createElement('optgroup');
+        estadosGroup.label = 'Entidades federativas';
+        var unidadesGroup = document.createElement('optgroup');
+        unidadesGroup.label = 'Unidades';
+
+        opciones.forEach(function (item) {
           var opt = document.createElement('option');
-          opt.value = estado;
-          opt.textContent = estado;
-          estadoSelect.appendChild(opt);
+          opt.value = item.clave;
+          opt.textContent = item.nombre;
+          if (item.tipo === 'unidad') {
+            unidadesGroup.appendChild(opt);
+          } else {
+            estadosGroup.appendChild(opt);
+          }
         });
+
+        if (estadosGroup.children.length > 0) estadoSelect.appendChild(estadosGroup);
+        if (unidadesGroup.children.length > 0) estadoSelect.appendChild(unidadesGroup);
 
         estadoSelect.disabled = false;
       })
@@ -60,7 +72,7 @@
     var password = passwordInput.value;
 
     if (!estado) {
-      showError('Selecciona tu entidad federativa.');
+      showError('Selecciona tu entidad federativa o unidad.');
       return;
     }
     if (!password) {

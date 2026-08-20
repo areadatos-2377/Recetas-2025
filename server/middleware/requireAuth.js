@@ -9,6 +9,7 @@ function requireAuth(req, res, next) {
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     req.estado = payload.estado;
+    req.clues = payload.clues || null;
     next();
   } catch (err) {
     return res.status(401).json({ error: 'Sesion invalida o expirada' });

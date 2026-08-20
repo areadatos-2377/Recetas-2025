@@ -1,8 +1,24 @@
--- Catalogo de acceso por entidad. Una fila por entidad federativa, contrasena
--- guardada como hash bcrypt (nunca en texto plano).
+-- Catalogo de acceso. Una fila por entidad federativa (acceso a todas sus
+-- unidades) o por unidad especifica (acceso solo a esa unidad dentro de su
+-- entidad). Contrasena guardada como hash bcrypt (nunca en texto plano).
+--
+--   estado         clave de acceso (lo que se manda al hacer login): el
+--                  nombre de la entidad para cuentas de entidad completa, o
+--                  el CLUES de la unidad para cuentas de una sola unidad.
+--   estado_real    entidad real a la que pertenecen las unidades visibles
+--                  (para filtrar unidades.estado). NULL en cuentas de
+--                  entidad completa: en ese caso "estado" ya es la entidad
+--                  real.
+--   clues          si no es NULL, el acceso se limita a esa sola unidad
+--                  (estado_real + clues). NULL = acceso a toda la entidad.
+--   nombre         etiqueta a mostrar en el selector de login. NULL = usar
+--                  "estado" tal cual (asi se comportan las 25 entidades).
 CREATE TABLE IF NOT EXISTS entidades_auth (
   estado         TEXT PRIMARY KEY,
-  password_hash  TEXT NOT NULL
+  password_hash  TEXT NOT NULL,
+  estado_real    TEXT,
+  clues          TEXT,
+  nombre         TEXT
 );
 
 -- Historial de envios: una fila por cada vez que una entidad da "Enviar informacion".

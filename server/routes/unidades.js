@@ -54,10 +54,10 @@ router.get('/unidades', requireAuth, async (req, res, next) => {
               vialidad, numero_exterior, numero_interior, codigo_postal, observaciones,
               estatus_operacion, latitud, longitud,
               origen_manual, capturado_en, enviado_en
-       FROM unidades WHERE estado = $1 ORDER BY nombre_unidad, clues`,
-      [req.estado]
+       FROM unidades WHERE estado = $1 AND ($2::text IS NULL OR clues = $2) ORDER BY nombre_unidad, clues`,
+      [req.estado, req.clues]
     );
-    res.json({ estado: req.estado, unidades: rows });
+    res.json({ estado: req.estado, clues: req.clues, unidades: rows });
   } catch (err) {
     next(err);
   }
@@ -102,8 +102,8 @@ router.get('/progreso', requireAuth, async (req, res, next) => {
              AND observaciones IS NOT NULL
              AND btrim(observaciones) <> ''
          )::int AS capturadas
-       FROM unidades WHERE estado = $1`,
-      [req.estado]
+       FROM unidades WHERE estado = $1 AND ($2::text IS NULL OR clues = $2)`,
+      [req.estado, req.clues]
     );
     res.json(rows[0]);
   } catch (err) {
@@ -114,6 +114,10 @@ router.get('/progreso', requireAuth, async (req, res, next) => {
 // Crea una unidad a mano (todavia sin CLUES asignado por la autoridad).
 router.post('/unidades', requireAuth, async (req, res, next) => {
   try {
+    if (req.clues) {
+      return res.status(403).json({ error: 'Tu acceso esta limitado a tu propia unidad; no puedes agregar unidades nuevas' });
+    }
+
     const body = req.body || {};
 
     const nombreUnidad = trimmedOrNull(body.nombre_unidad);
@@ -215,7 +219,10 @@ router.put('/unidades/:id', requireAuth, async (req, res, next) => {
       return res.status(400).json({ error: 'id invalido' });
     }
 
-    const existing = await pool.query('SELECT origen_manual FROM unidades WHERE id = $1 AND estado = $2', [id, req.estado]);
+    const existing = await pool.query(
+      'SELECT origen_manual FROM unidades WHERE id = $1 AND estado = $2 AND ($3::text IS NULL OR clues = $3)',
+      [id, req.estado, req.clues]
+    );
     if (existing.rows.length === 0) {
       return res.status(404).json({ error: 'Unidad no encontrada para esta entidad' });
     }
@@ -287,11 +294,13 @@ router.put('/unidades/:id', requireAuth, async (req, res, next) => {
     }
 
     setClauses.push('capturado_en = now()');
-    params.push(id, req.estado);
+    params.push(id, req.estado, req.clues);
 
     try {
       await pool.query(
-        `UPDATE unidades SET ${setClauses.join(', ')} WHERE id = $${params.length - 1} AND estado = $${params.length}`,
+        `UPDATE unidades SET ${setClauses.join(', ')}
+         WHERE id = $${params.length - 2} AND estado = $${params.length - 1}
+           AND ($${params.length}::text IS NULL OR clues = $${params.length})`,
         params
       );
     } catch (err) {
@@ -316,7 +325,10 @@ router.delete('/unidades/:id', requireAuth, async (req, res, next) => {
       return res.status(400).json({ error: 'id invalido' });
     }
 
-    const existing = await pool.query('SELECT origen_manual FROM unidades WHERE id = $1 AND estado = $2', [id, req.estado]);
+    const existing = await pool.query(
+      'SELECT origen_manual FROM unidades WHERE id = $1 AND estado = $2 AND ($3::text IS NULL OR clues = $3)',
+      [id, req.estado, req.clues]
+    );
     if (existing.rows.length === 0) {
       return res.status(404).json({ error: 'Unidad no encontrada para esta entidad' });
     }
@@ -324,7 +336,10 @@ router.delete('/unidades/:id', requireAuth, async (req, res, next) => {
       return res.status(400).json({ error: 'Solo se pueden eliminar unidades agregadas manualmente' });
     }
 
-    await pool.query('DELETE FROM unidades WHERE id = $1 AND estado = $2', [id, req.estado]);
+    await pool.query(
+      'DELETE FROM unidades WHERE id = $1 AND estado = $2 AND ($3::text IS NULL OR clues = $3)',
+      [id, req.estado, req.clues]
+    );
     res.json({ ok: true });
   } catch (err) {
     next(err);
