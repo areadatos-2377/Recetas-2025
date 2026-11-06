@@ -3,8 +3,10 @@
  * y lo guarda en una carpeta fija de Google Drive.
  *
  * Contrato con el backend (server/services/driveClient.js):
- *   POST body JSON: { token, filename, fileBase64 }
- *   Respuesta éxito:  {"ok": true,  "fileId": "...", "url": "..."}
+ *   POST body JSON: { token, filename, fileBase64, replaceFileId? }
+ *     replaceFileId (opcional): archivo anterior de la carpeta que se manda a
+ *     la papelera al guardar el nuevo (solo queda la última versión).
+ *   Respuesta éxito:  {"ok": true,  "fileId": "...", "url": "...", "replaced": true|false}
  *   Respuesta error:  {"ok": false, "error": "mensaje legible"}
  */
 
@@ -50,7 +52,11 @@ function doPost(e) {
     var folder = DriveApp.getFolderById(FOLDER_ID);
     var file = folder.createFile(blob);
 
-    return jsonResponse_({ ok: true, fileId: file.getId(), url: file.getUrl() });
+    // Primero se guarda el archivo nuevo y solo despues se retira el anterior,
+    // asi un fallo nunca deja a la entidad sin ninguna version en Drive.
+    var replaced = trashPreviousFile_(folder, payload.replaceFileId, file.getId());
+
+    return jsonResponse_({ ok: true, fileId: file.getId(), url: file.getUrl(), replaced: replaced });
   } catch (err) {
     // Cualquier excepción (Drive sin permisos, base64 corrupto, etc.) se
     // convierte en JSON en vez de dejar que Apps Script muestre su página
@@ -68,6 +74,32 @@ function doGet(e) {
   return ContentService
     .createTextOutput('Servicio activo. Usa POST.')
     .setMimeType(ContentService.MimeType.TEXT);
+}
+
+/**
+ * Manda a la papelera la version anterior del archivo, solo si realmente
+ * esta dentro de la carpeta de destino (para que un id arbitrario enviado
+ * en la peticion no pueda borrar archivos ajenos). Nunca lanza: si el
+ * archivo ya no existe o no se puede borrar, el envio nuevo sigue siendo
+ * valido. Devuelve true si se retiro el archivo anterior.
+ */
+function trashPreviousFile_(folder, previousId, newId) {
+  if (!previousId || typeof previousId !== 'string' || previousId === newId) {
+    return false;
+  }
+  try {
+    var previous = DriveApp.getFileById(previousId);
+    var parents = previous.getParents();
+    while (parents.hasNext()) {
+      if (parents.next().getId() === folder.getId()) {
+        previous.setTrashed(true);
+        return true;
+      }
+    }
+  } catch (err) {
+    // Archivo inexistente o sin permisos: se ignora a proposito.
+  }
+  return false;
 }
 
 /**

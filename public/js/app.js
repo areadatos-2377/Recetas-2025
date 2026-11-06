@@ -783,14 +783,18 @@
       '<li><strong>' + formatNumber(summary.recetasCompletas) + '</strong> recetas completas</li>' +
       '<li><strong>' + formatNumber(summary.recetasIncompletas) + '</strong> recetas incompletas</li>' +
       '<li><strong>' + formatNumber(summary.recetasNoSurtidas) + '</strong> recetas no surtidas</li>' +
+      '<li><strong>' + formatNumber(summary.total - summary.pendientes) + '</strong> unidades con las tres cantidades capturadas</li>' +
       '<li><strong>' + formatNumber(summary.pendientes) + '</strong> unidades pendientes de completar las tres cantidades</li>' +
       '</ul>' +
-      '<p>Se requiere capturar las tres cantidades para cada CLUES antes de enviar. Puedes enviar más de una vez; cada envío genera un nuevo archivo.</p>';
+      (summary.pendientes > 0
+        ? '<p>Puedes enviar tu avance ahora y continuar después. Las unidades pendientes se enviarán con las cantidades vacías.</p>'
+        : '<p>Todas las unidades tienen sus cantidades capturadas.</p>') +
+      '<p>Puedes enviar las veces que necesites: cada envío reemplaza al anterior y en Drive solo queda la última versión.</p>';
     confirmModalResult.hidden = true;
     confirmModalResult.innerHTML = '';
     confirmModalResult.className = 'modal-result';
     confirmSendBtn.hidden = false;
-    confirmSendBtn.disabled = summary.pendientes > 0;
+    confirmSendBtn.disabled = false;
     confirmSendBtn.textContent = 'Confirmar y enviar';
     confirmCancelBtn.textContent = 'Cancelar';
     confirmModal.hidden = false;

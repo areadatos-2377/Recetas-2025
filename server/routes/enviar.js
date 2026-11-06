@@ -27,29 +27,30 @@ router.post('/enviar', requireAuth, async (req, res, next) => {
       return res.status(404).json({ error: 'No hay unidades registradas para esta entidad' });
     }
 
-    const pendientes = unidades.filter((u) =>
-      [u.recetas_completas, u.recetas_incompletas, u.recetas_no_surtidas]
-        .some((cantidad) => !Number.isInteger(cantidad) || cantidad < 0 || cantidad > 2147483647)
-    );
-    if (pendientes.length > 0) {
-      const ejemplos = pendientes.slice(0, 5).map((u) => u.clues || u.nombre_unidad).join(', ');
-      return res.status(400).json({
-        error: `Faltan cantidades obligatorias en ${pendientes.length} unidades. Completa A, B y C para cada CLUES antes de enviar. Ejemplos: ${ejemplos}`,
-        unidadesPendientes: pendientes.length,
-      });
-    }
-
+    // Se permite enviar avances parciales: las unidades sin capturar van con
+    // las celdas de cantidades vacias y no suman a los totales.
     const total = unidades.length;
-    const recetasCompletas = unidades.reduce((sum, u) => sum + u.recetas_completas, 0);
-    const recetasIncompletas = unidades.reduce((sum, u) => sum + u.recetas_incompletas, 0);
-    const recetasNoSurtidas = unidades.reduce((sum, u) => sum + u.recetas_no_surtidas, 0);
+    const sumar = (campo) => unidades.reduce((sum, u) => sum + (Number.isInteger(u[campo]) ? u[campo] : 0), 0);
+    const recetasCompletas = sumar('recetas_completas');
+    const recetasIncompletas = sumar('recetas_incompletas');
+    const recetasNoSurtidas = sumar('recetas_no_surtidas');
+
+    // Cada envio reemplaza al anterior en Drive: se manda el id del ultimo
+    // archivo de esta entidad para que el Apps Script lo mande a la papelera.
+    const { rows: previos } = await pool.query(
+      `SELECT drive_file_id FROM submissions
+       WHERE estado = $1 AND drive_file_id IS NOT NULL
+       ORDER BY creado_en DESC, id DESC LIMIT 1`,
+      [req.estado]
+    );
+    const replaceFileId = previos.length > 0 ? previos[0].drive_file_id : null;
 
     const buffer = await buildUnidadesWorkbook(req.estado, unidades);
     const fileName = buildFileName(req.estado);
 
     let uploadResult;
     try {
-      uploadResult = await uploadToDrive(fileName, buffer);
+      uploadResult = await uploadToDrive(fileName, buffer, replaceFileId);
     } catch (err) {
       // El detalle tecnico queda en los logs del servidor para diagnostico;
       // al usuario se le da un mensaje simple y accionable, sin jerga.
