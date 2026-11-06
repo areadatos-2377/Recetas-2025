@@ -256,8 +256,8 @@ button {
   justify-content: space-between;
   gap: 1rem;
   padding: 0.85rem 1.5rem;
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  background: var(--color-primary);
+  border-bottom: 1px solid var(--color-primary-dark);
   box-shadow: 0 1px 0 rgba(23, 32, 51, 0.04);
   position: sticky;
   top: 0;
@@ -273,7 +273,7 @@ button {
 
 .app-header-title h1 {
   font-size: 1.15rem;
-  color: var(--color-primary);
+  color: var(--color-primary-contrast);
 }
 
 .estado-badge {
@@ -1000,8 +1000,8 @@ tr.unidad-row.row-expanded {
 }
 
 .status-pendiente {
-  background: var(--color-warning-bg);
-  color: var(--color-warning);
+  background: #c62828;
+  color: #ffffff;
 }
 
 .status-capturado {
