@@ -6,3 +6,6 @@ secrets/
 backups/
 .agents/
 skills-lock.json
+
+# clasp: configuracion local de cada desarrollador (scriptId propio)
+apps-script/.clasp.json

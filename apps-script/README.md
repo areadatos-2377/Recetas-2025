@@ -45,7 +45,7 @@ archivo se pueda compartir sin revelarla), sino guardada por separado:
 ## 4. Confirmar acceso a la carpeta de Drive
 
 El script guarda los archivos en la carpeta con este enlace:
-https://drive.google.com/drive/folders/1qUePwlC-0QyJmF_e0wWsUVFl51ixdkf_
+https://drive.google.com/drive/folders/1mE_J2V971iRlGLqxtCxDLs9Q6YC-YDvI
 
 - Si la cuenta de Google con la que creaste el script (paso 1) es la misma
   cuenta dueña de esa carpeta, no tienes que hacer nada más: ya tiene
