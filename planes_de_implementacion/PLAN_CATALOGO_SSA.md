@@ -102,4 +102,4 @@ En el formulario "Agregar unidad" (`public/app.html` + `public/js/app.js`):
 ## 9. Fuera de alcance (por ahora)
 
 - No se valida ni se hace nada especial si el catálogo marca una unidad como `FUERA DE OPERACION` — el estatus solo se guarda como referencia, la decisión de incluir/excluir/ratificar la sigue tomando la entidad.
-- No se reemplaza ni se compara este catálogo contra el padrón oficial (`CLUES_IMB.xlsx`) — son dos fuentes independientes, cada una para su propio propósito.
+- No se reemplaza ni se compara este catálogo contra el padrón oficial (`CLUES_IMB2025.xlsx`) — son dos fuentes independientes, cada una para su propio propósito.

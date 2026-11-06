@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS submissions (
   creado_en         TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Padron de unidades, precargado desde legacy/CLUES_IMB.xlsx (hoja BD_IMS_Final),
+-- Padron de unidades, precargado desde legacy/CLUES_IMB2025.xlsx (hoja BD_IMS_Final),
 -- mas las que cada entidad agregue a mano cuando aun no tienen CLUES asignado.
 -- La llave primaria es "id" (no CLUES): puede haber varias unidades sin CLUES
 -- todavia (clues = NULL), y CLUES es unico solo dentro de la misma entidad

@@ -5,7 +5,7 @@ const fs = require('fs');
 const ExcelJS = require('exceljs');
 const { pool } = require('../db');
 
-const LEGACY_FILE = path.join(__dirname, '..', '..', 'legacy', 'CLUES_IMB.xlsx');
+const PADRON_FILE = path.join(__dirname, '..', '..', 'legacy', 'CLUES_IMB2025.xlsx');
 const SHEET_NAME = 'BD_IMS_Final';
 
 // El Excel a veces trae el nombre de la entidad en el formato "oficial"
@@ -103,10 +103,10 @@ async function run() {
   await pool.query(schema);
 
   const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.readFile(LEGACY_FILE);
+  await workbook.xlsx.readFile(PADRON_FILE);
   const sheet = workbook.getWorksheet(SHEET_NAME);
   if (!sheet) {
-    throw new Error(`No se encontro la hoja "${SHEET_NAME}" en ${LEGACY_FILE}`);
+    throw new Error(`No se encontro la hoja "${SHEET_NAME}" en ${PADRON_FILE}`);
   }
 
   const colIndexByField = {};
