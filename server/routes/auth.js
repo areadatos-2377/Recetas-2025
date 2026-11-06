@@ -21,9 +21,15 @@ const loginLimiter = rateLimit({
 router.get('/estados', async (req, res, next) => {
   try {
     const { rows } = await pool.query(
-      `SELECT estado AS clave, COALESCE(nombre, estado) AS nombre,
-              CASE WHEN clues IS NOT NULL THEN 'unidad' ELSE 'estado' END AS tipo
-       FROM entidades_auth
+      `SELECT ea.estado AS clave, COALESCE(ea.nombre, ea.estado) AS nombre,
+              CASE WHEN ea.clues IS NOT NULL THEN 'unidad' ELSE 'estado' END AS tipo
+       FROM entidades_auth ea
+       WHERE ea.clues IS NULL OR EXISTS (
+         SELECT 1 FROM unidades u
+         WHERE u.estado = COALESCE(ea.estado_real, ea.estado)
+           AND u.clues = ea.clues
+           AND u.archivado_en IS NULL
+       )
        ORDER BY tipo, nombre`
     );
     res.json({ estados: rows });
@@ -40,7 +46,15 @@ router.post('/login', loginLimiter, async (req, res, next) => {
     }
 
     const { rows } = await pool.query(
-      'SELECT estado, password_hash, estado_real, clues, nombre FROM entidades_auth WHERE estado = $1',
+      `SELECT ea.estado, ea.password_hash, ea.estado_real, ea.clues, ea.nombre
+       FROM entidades_auth ea
+       WHERE ea.estado = $1
+         AND (ea.clues IS NULL OR EXISTS (
+           SELECT 1 FROM unidades u
+           WHERE u.estado = COALESCE(ea.estado_real, ea.estado)
+             AND u.clues = ea.clues
+             AND u.archivado_en IS NULL
+         ))`,
       [estado]
     );
 

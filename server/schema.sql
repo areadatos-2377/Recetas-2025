@@ -76,6 +76,7 @@ CREATE TABLE IF NOT EXISTS unidades (
   origen_manual                   BOOLEAN NOT NULL DEFAULT false,
   capturado_en                   TIMESTAMPTZ,
   enviado_en                     TIMESTAMPTZ,
+  archivado_en                    TIMESTAMPTZ,
   submission_id                  INTEGER REFERENCES submissions(id),
   UNIQUE (estado, clues)
 );

@@ -55,7 +55,8 @@ router.get('/unidades', requireAuth, async (req, res, next) => {
               vialidad, numero_exterior, numero_interior, codigo_postal, observaciones,
               estatus_operacion, latitud, longitud,
               origen_manual, capturado_en, enviado_en
-       FROM unidades WHERE estado = $1 AND ($2::text IS NULL OR clues = $2) ORDER BY nombre_unidad, clues`,
+       FROM unidades WHERE estado = $1 AND archivado_en IS NULL
+         AND ($2::text IS NULL OR clues = $2) ORDER BY nombre_unidad, clues`,
       [req.estado, req.clues]
     );
     res.json({ estado: req.estado, clues: req.clues, unidades: rows });
@@ -103,7 +104,8 @@ router.get('/progreso', requireAuth, async (req, res, next) => {
              AND recetas_incompletas IS NOT NULL
              AND recetas_no_surtidas IS NOT NULL
          )::int AS capturadas
-       FROM unidades WHERE estado = $1 AND ($2::text IS NULL OR clues = $2)`,
+       FROM unidades WHERE estado = $1 AND archivado_en IS NULL
+         AND ($2::text IS NULL OR clues = $2)`,
       [req.estado, req.clues]
     );
     res.json(rows[0]);
@@ -209,7 +211,7 @@ router.put('/unidades/:id', requireAuth, async (req, res, next) => {
     }
 
     const existing = await pool.query(
-      'SELECT origen_manual FROM unidades WHERE id = $1 AND estado = $2 AND ($3::text IS NULL OR clues = $3)',
+      'SELECT origen_manual FROM unidades WHERE id = $1 AND estado = $2 AND archivado_en IS NULL AND ($3::text IS NULL OR clues = $3)',
       [id, req.estado, req.clues]
     );
     if (existing.rows.length === 0) {
@@ -280,6 +282,7 @@ router.put('/unidades/:id', requireAuth, async (req, res, next) => {
       await pool.query(
         `UPDATE unidades SET ${setClauses.join(', ')}
          WHERE id = $${params.length - 2} AND estado = $${params.length - 1}
+           AND archivado_en IS NULL
            AND ($${params.length}::text IS NULL OR clues = $${params.length})`,
         params
       );
@@ -306,7 +309,7 @@ router.delete('/unidades/:id', requireAuth, async (req, res, next) => {
     }
 
     const existing = await pool.query(
-      'SELECT origen_manual FROM unidades WHERE id = $1 AND estado = $2 AND ($3::text IS NULL OR clues = $3)',
+      'SELECT origen_manual FROM unidades WHERE id = $1 AND estado = $2 AND archivado_en IS NULL AND ($3::text IS NULL OR clues = $3)',
       [id, req.estado, req.clues]
     );
     if (existing.rows.length === 0) {
@@ -317,7 +320,7 @@ router.delete('/unidades/:id', requireAuth, async (req, res, next) => {
     }
 
     await pool.query(
-      'DELETE FROM unidades WHERE id = $1 AND estado = $2 AND ($3::text IS NULL OR clues = $3)',
+      'DELETE FROM unidades WHERE id = $1 AND estado = $2 AND archivado_en IS NULL AND ($3::text IS NULL OR clues = $3)',
       [id, req.estado, req.clues]
     );
     res.json({ ok: true });

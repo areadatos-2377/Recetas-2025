@@ -72,6 +72,7 @@ router.get('/admin/resumen', requireAdmin, async (req, res, next) => {
         COALESCE(SUM(recetas_incompletas), 0)::bigint AS recetas_incompletas,
         COALESCE(SUM(recetas_no_surtidas), 0)::bigint AS recetas_no_surtidas
       FROM unidades
+      WHERE archivado_en IS NULL
       GROUP BY estado
       ORDER BY estado
     `);

@@ -19,7 +19,7 @@ router.post('/enviar', requireAuth, async (req, res, next) => {
               nombre_unidad, municipio, localidad, asentamiento, tipo_vialidad,
               vialidad, numero_exterior, numero_interior, codigo_postal,
               estatus_operacion, latitud, longitud
-       FROM unidades WHERE estado = $1 ORDER BY nombre_unidad, clues`,
+       FROM unidades WHERE estado = $1 AND archivado_en IS NULL ORDER BY nombre_unidad, clues`,
       [req.estado]
     );
 
@@ -71,7 +71,7 @@ router.post('/enviar', requireAuth, async (req, res, next) => {
     const submission = submissionRows[0];
 
     await pool.query(
-      'UPDATE unidades SET enviado_en = now(), submission_id = $1 WHERE estado = $2',
+      'UPDATE unidades SET enviado_en = now(), submission_id = $1 WHERE estado = $2 AND archivado_en IS NULL',
       [submission.id, req.estado]
     );
 

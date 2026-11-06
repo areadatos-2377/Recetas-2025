@@ -9,6 +9,7 @@
   "scripts": {
     "start": "node server/index.js",
     "seed": "node server/scripts/seed.js",
+    "migrate:archive-obsolete": "node server/scripts/migrate-archive-obsolete-unidades.js",
     "migrate:surtimiento": "node server/scripts/migrate-surtimiento-recetas.js",
     "gen:passwords": "node server/scripts/generate-passwords.js"
   },
