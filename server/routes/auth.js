@@ -24,11 +24,11 @@ router.get('/estados', async (req, res, next) => {
       `SELECT ea.estado AS clave, COALESCE(ea.nombre, ea.estado) AS nombre,
               CASE WHEN ea.clues IS NOT NULL THEN 'unidad' ELSE 'estado' END AS tipo
        FROM entidades_auth ea
-       WHERE EXISTS (
+       WHERE ea.clues IS NULL OR EXISTS (
          SELECT 1 FROM unidades u
          WHERE u.estado = COALESCE(ea.estado_real, ea.estado)
+           AND u.clues = ea.clues
            AND u.archivado_en IS NULL
-           AND (ea.clues IS NULL OR u.clues = ea.clues)
        )
        ORDER BY tipo, nombre`
     );
@@ -49,12 +49,12 @@ router.post('/login', loginLimiter, async (req, res, next) => {
       `SELECT ea.estado, ea.password_hash, ea.estado_real, ea.clues, ea.nombre
        FROM entidades_auth ea
        WHERE ea.estado = $1
-         AND EXISTS (
+         AND (ea.clues IS NULL OR EXISTS (
            SELECT 1 FROM unidades u
            WHERE u.estado = COALESCE(ea.estado_real, ea.estado)
+             AND u.clues = ea.clues
              AND u.archivado_en IS NULL
-             AND (ea.clues IS NULL OR u.clues = ea.clues)
-         )`,
+         ))`,
       [estado]
     );
 
