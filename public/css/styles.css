@@ -1100,6 +1100,17 @@ tr.detail-row td {
   font-size: 0.9rem;
 }
 
+/* Cantidades A, B y C: una debajo de otra, con recuadro oscuro (segun el documento de cambios). */
+.detail-grid.quantity-grid {
+  grid-template-columns: minmax(180px, 280px);
+  gap: 0.9rem;
+}
+
+.quantity-grid .detail-editable-field input {
+  border: 2px solid var(--color-primary-dark);
+  border-radius: 2px;
+}
+
 .form-group-wide {
   grid-column: 1 / -1;
 }
