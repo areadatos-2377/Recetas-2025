@@ -273,7 +273,7 @@
     return (
       '<div class="field detail-editable-field">' +
       '<label for="' + inputId + '">' + escapeHtml(field.label) + ' – Cantidad</label>' +
-      '<input type="number" id="' + inputId + '" min="0" max="2147483647" step="1" required ' +
+      '<input type="number" id="' + inputId + '" min="0" max="2147483647" step="1" inputmode="numeric" required data-quantity="1" ' +
       'data-field="' + field.field + '" data-id="' + id + '" value="' + escapeHtml(inputValue) + '">' +
       '</div>'
     );
@@ -509,6 +509,46 @@
       saveField(id, field, value);
     }
   }
+
+  // ---------------------------------------------------------------------
+  // Cantidades: solo enteros >= 0 (sin negativos, decimales ni notacion cientifica)
+  // ---------------------------------------------------------------------
+  var BLOCKED_QUANTITY_KEYS = ['-', '+', 'e', 'E', '.', ',', 'ArrowUp', 'ArrowDown'];
+
+  tablesContainer.addEventListener('keydown', function (event) {
+    var el = event.target;
+    if (el.matches && el.matches('input[data-quantity]') && BLOCKED_QUANTITY_KEYS.indexOf(event.key) !== -1) {
+      event.preventDefault();
+    }
+  });
+
+  // La rueda del mouse cambia el valor de un number con foco; se evita quitando el foco.
+  tablesContainer.addEventListener('wheel', function (event) {
+    var el = event.target;
+    if (el.matches && el.matches('input[data-quantity]') && document.activeElement === el) {
+      el.blur();
+    }
+  }, { passive: true });
+
+  tablesContainer.addEventListener('focusin', function (event) {
+    var el = event.target;
+    if (el.matches && el.matches('input[data-quantity]')) el.dataset.prev = el.value;
+  });
+
+  // Cubre pegar texto o arrastrarlo: si el valor no es un entero >= 0, se restaura el anterior.
+  tablesContainer.addEventListener('input', function (event) {
+    var el = event.target;
+    if (el.matches && el.matches('input[data-quantity]')) {
+      var raw = el.value;
+      var invalid = el.validity.badInput || (raw !== '' && !/^\d+$/.test(raw));
+      if (invalid) {
+        el.value = el.dataset.prev || '';
+        event.stopImmediatePropagation();
+        return;
+      }
+      el.dataset.prev = raw;
+    }
+  }, true);
 
   tablesContainer.addEventListener('input', function (event) {
     var el = event.target;
