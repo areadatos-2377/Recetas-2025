@@ -29,10 +29,7 @@
         return res.json();
       })
       .then(function (data) {
-        // Guanajuato (y su cuenta de unidad) no participa en el proyecto: se oculta del selector.
-        var opciones = ((data && data.estados) || []).filter(function (item) {
-          return item.clave !== 'GUANAJUATO' && item.clave !== 'GTIMB000015';
-        });
+        var opciones = (data && data.estados) || [];
         estadoSelect.innerHTML = '';
 
         var placeholder = document.createElement('option');

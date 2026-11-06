@@ -433,8 +433,7 @@
         return res.json();
       })
       .then(function (data) {
-        // Guanajuato no participa en el proyecto: se excluye de la tabla, graficas y totales.
-        rows = (data.resumen || []).filter(function (r) { return r.estado !== 'GUANAJUATO'; });
+        rows = data.resumen || [];
         renderNationalSummary();
         applyView(currentView);
       })
