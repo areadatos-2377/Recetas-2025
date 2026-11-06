@@ -55,7 +55,10 @@ async function requestFollowingRedirects(urlStr, options, maxRedirects) {
   throw new Error('Demasiadas redirecciones al conectar con el webhook de Drive');
 }
 
-async function uploadToDrive(fileName, buffer) {
+// replaceFileId (opcional): id del archivo anterior que el Apps Script debe
+// mandar a la papelera despues de guardar el nuevo, para dejar solo la
+// ultima version enviada.
+async function uploadToDrive(fileName, buffer, replaceFileId) {
   const url = process.env.DRIVE_WEBHOOK_URL;
   const token = process.env.DRIVE_WEBHOOK_TOKEN;
 
@@ -67,6 +70,7 @@ async function uploadToDrive(fileName, buffer) {
     token,
     filename: fileName,
     fileBase64: buffer.toString('base64'),
+    replaceFileId: replaceFileId || undefined,
   });
 
   const response = await requestFollowingRedirects(

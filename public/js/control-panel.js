@@ -37,14 +37,14 @@
       emptyText: 'No hay datos todavía.',
     },
     pending: {
-      title: 'Entidades sin enviar',
+      title: 'Entidades sin ningún envío',
       theme: 'risk',
       getList: function () { return sortDescByPct(rows.filter(function (r) { return !r.ultimoEnvio; })); },
       valueLabel: function (r) { return formatNumber(r.capturadas) + ' / ' + formatNumber(r.total); },
-      emptyText: 'Todas las entidades ya enviaron su reporte.',
+      emptyText: 'Todas las entidades ya enviaron al menos un avance.',
     },
     sent: {
-      title: 'Entidades que ya enviaron',
+      title: 'Entidades con avance o reporte enviado',
       theme: 'good',
       getList: function () { return sortDescByPct(rows.filter(function (r) { return !!r.ultimoEnvio; })); },
       valueLabel: function (r) { return formatNumber(r.capturadas) + ' / ' + formatNumber(r.total); },
@@ -281,11 +281,11 @@
     if (capturadas === 0 && enviaron === 0) {
       headline = 'La captura del surtimiento todavía no arranca en ninguna entidad';
     } else if (enviaron === rows.length) {
-      headline = 'Las ' + rows.length + ' entidades ya iniciaron su reporte';
+      headline = 'Las ' + rows.length + ' entidades ya enviaron al menos un avance';
     } else if (enviaron > 0) {
-      headline = 'Solo ' + enviaron + ' de ' + rows.length + ' entidades han iniciado su reporte';
+      headline = 'Solo ' + enviaron + ' de ' + rows.length + ' entidades han enviado al menos un avance';
     } else {
-      headline = entidadesConCaptura + ' de ' + rows.length + ' entidades ya están capturando información, pero ninguna ha enviado su reporte todavía';
+      headline = entidadesConCaptura + ' de ' + rows.length + ' entidades ya están capturando información, pero ninguna ha enviado un avance todavía';
     }
 
     var hoy = new Date().toLocaleDateString('es-MX', { timeZone: 'America/Mexico_City', day: 'numeric', month: 'long', year: 'numeric' });
@@ -300,20 +300,20 @@
       '<div class="stat-row">' +
       '<div class="stat"><b>' + pctText + '%</b><span>avance nacional</span></div>' +
       '<div class="stat"><b>' + formatNumber(capturadas) + '</b><span>unidades capturadas</span></div>' +
-      '<div class="stat"><b>' + enviaron + ' / ' + rows.length + '</b><span>entidades con envío registrado</span></div>' +
+      '<div class="stat"><b>' + enviaron + ' / ' + rows.length + '</b><span>entidades con avance enviado</span></div>' +
       '</div>';
 
     focusGridEl.innerHTML =
       '<div class="insight-col">' +
       '<p class="eyebrow">Mayor volumen pendiente</p>' +
       '<h3>Dónde concentrar el seguimiento</h3>' +
-      '<p class="insight-col-copy">' + pluralize(pendientes, 'entidad sigue', 'entidades siguen') + ' sin enviar. Prioridad por volumen pendiente:</p>' +
+      '<p class="insight-col-copy">' + pluralize(pendientes, 'entidad sigue', 'entidades siguen') + ' sin ningún envío. Prioridad por volumen pendiente:</p>' +
       renderRankList(riskRows, maxPendiente, 'No hay entidades pendientes.') +
       '</div>' +
       '<div class="insight-col">' +
       '<p class="eyebrow">Entidades activas</p>' +
       '<h3>Cumplimiento reciente</h3>' +
-      '<p class="insight-col-copy">' + pluralize(enviaron, 'entidad ya registró', 'entidades ya registraron') + ' al menos un envío.</p>' +
+      '<p class="insight-col-copy">' + pluralize(enviaron, 'entidad ya registró', 'entidades ya registraron') + ' al menos un envío (el archivo en Drive es siempre la última versión).</p>' +
       renderEntityList(activeRows, function (r) { return formatFecha(r.ultimoEnvio.creadoEn); }, 'Todavía no hay envíos confirmados.') +
       '</div>' +
       '<div class="insight-col">' +
@@ -344,7 +344,7 @@
     var pct = progressPercent(r);
     var pctClass = pct >= 60 ? 'pct-good' : 'pct-risk';
     var ultimo = r.ultimoEnvio
-      ? '<span class="chip chip-sent">Enviado</span>' +
+      ? '<span class="chip chip-sent">' + (r.capturadas < r.total ? 'Avance enviado' : 'Enviado') + '</span>' +
         '<span class="send-date">' + escapeHtml(formatFecha(r.ultimoEnvio.creadoEn)) + '</span>' +
         renderFileLink(r.ultimoEnvio)
       : '<span class="chip chip-pending">Sin enviar</span>';
