@@ -34,7 +34,7 @@
 
         var placeholder = document.createElement('option');
         placeholder.value = '';
-        placeholder.textContent = 'Selecciona tu entidad o unidad';
+        placeholder.textContent = 'Seleccionar tu entidad';
         estadoSelect.appendChild(placeholder);
 
         var estadosGroup = document.createElement('optgroup');
