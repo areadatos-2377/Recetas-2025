@@ -6,8 +6,8 @@ const { pool } = require('../db');
 
 // Borra los datos de prueba para dejar la base lista para captura real:
 //   - Unidades agregadas manualmente durante pruebas: se BORRAN por completo.
-//   - Unidades del padron oficial con algo capturado (tipo_unidad,
-//     condicion_unidad, observaciones): se les LIMPIA la captura, pero la
+//   - Unidades del padron oficial con cantidades de surtimiento o campos de
+//     captura antiguos: se les LIMPIA la captura, pero la
 //     unidad en si (CLUES, nombre, direccion, etc.) NO se toca ni se borra.
 //   - Historial de envios (submissions): se BORRA por completo.
 //   - entidades_auth (las 25 contrasenas reales): NUNCA se toca.
@@ -37,6 +37,8 @@ async function run() {
   const conCaptura = await pool.query(
     `SELECT COUNT(*)::int AS n FROM unidades
      WHERE tipo_unidad IS NOT NULL OR condicion_unidad IS NOT NULL OR observaciones IS NOT NULL
+        OR recetas_completas IS NOT NULL OR recetas_incompletas IS NOT NULL
+        OR recetas_no_surtidas IS NOT NULL
         OR capturado_en IS NOT NULL OR enviado_en IS NOT NULL OR submission_id IS NOT NULL`
   );
   const totalSubmissions = await pool.query('SELECT COUNT(*)::int AS n FROM submissions');
@@ -81,10 +83,15 @@ async function run() {
        SET tipo_unidad = NULL,
            condicion_unidad = NULL,
            observaciones = NULL,
-           capturado_en = NULL,
+       recetas_completas = NULL,
+       recetas_incompletas = NULL,
+       recetas_no_surtidas = NULL,
+       capturado_en = NULL,
            enviado_en = NULL,
            submission_id = NULL
        WHERE tipo_unidad IS NOT NULL OR condicion_unidad IS NOT NULL OR observaciones IS NOT NULL
+          OR recetas_completas IS NOT NULL OR recetas_incompletas IS NOT NULL
+          OR recetas_no_surtidas IS NOT NULL
           OR capturado_en IS NOT NULL OR enviado_en IS NOT NULL OR submission_id IS NOT NULL`
     );
     console.log('Unidades con captura de prueba limpiadas:', reset.rowCount);

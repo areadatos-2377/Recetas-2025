@@ -13,10 +13,11 @@ router.post('/enviar', requireAuth, async (req, res, next) => {
     }
 
     const { rows: unidades } = await pool.query(
-      `SELECT clues, estado, tipo_unidad, condicion_unidad, nivel_atencion,
+      `SELECT clues, estado, tipo_unidad,
+              recetas_completas, recetas_incompletas, recetas_no_surtidas, nivel_atencion,
               nombre_tipo_establecimiento, propiedad_inmueble, nombre_tipologia,
               nombre_unidad, municipio, localidad, asentamiento, tipo_vialidad,
-              vialidad, numero_exterior, numero_interior, codigo_postal, observaciones,
+              vialidad, numero_exterior, numero_interior, codigo_postal,
               estatus_operacion, latitud, longitud
        FROM unidades WHERE estado = $1 ORDER BY nombre_unidad, clues`,
       [req.estado]
@@ -26,10 +27,22 @@ router.post('/enviar', requireAuth, async (req, res, next) => {
       return res.status(404).json({ error: 'No hay unidades registradas para esta entidad' });
     }
 
+    const pendientes = unidades.filter((u) =>
+      [u.recetas_completas, u.recetas_incompletas, u.recetas_no_surtidas]
+        .some((cantidad) => !Number.isInteger(cantidad) || cantidad < 0 || cantidad > 2147483647)
+    );
+    if (pendientes.length > 0) {
+      const ejemplos = pendientes.slice(0, 5).map((u) => u.clues || u.nombre_unidad).join(', ');
+      return res.status(400).json({
+        error: `Faltan cantidades obligatorias en ${pendientes.length} unidades. Completa A, B y C para cada CLUES antes de enviar. Ejemplos: ${ejemplos}`,
+        unidadesPendientes: pendientes.length,
+      });
+    }
+
     const total = unidades.length;
-    const incluidas = unidades.filter((u) => u.condicion_unidad === 'SE_INCLUYE').length;
-    const excluidas = unidades.filter((u) => u.condicion_unidad === 'SE_EXCLUYE').length;
-    const ratificadas = unidades.filter((u) => u.condicion_unidad === 'SE_RATIFICA').length;
+    const recetasCompletas = unidades.reduce((sum, u) => sum + u.recetas_completas, 0);
+    const recetasIncompletas = unidades.reduce((sum, u) => sum + u.recetas_incompletas, 0);
+    const recetasNoSurtidas = unidades.reduce((sum, u) => sum + u.recetas_no_surtidas, 0);
 
     const buffer = await buildUnidadesWorkbook(req.estado, unidades);
     const fileName = buildFileName(req.estado);
@@ -45,10 +58,13 @@ router.post('/enviar', requireAuth, async (req, res, next) => {
     }
 
     const { rows: submissionRows } = await pool.query(
-      `INSERT INTO submissions (estado, archivo_nombre, drive_file_id, drive_file_url, total_unidades, incluidas, excluidas, ratificadas)
+      `INSERT INTO submissions (
+         estado, archivo_nombre, drive_file_id, drive_file_url, total_unidades,
+         recetas_completas, recetas_incompletas, recetas_no_surtidas
+       )
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING id, creado_en`,
-      [req.estado, fileName, uploadResult.fileId, uploadResult.fileUrl, total, incluidas, excluidas, ratificadas]
+      [req.estado, fileName, uploadResult.fileId, uploadResult.fileUrl, total, recetasCompletas, recetasIncompletas, recetasNoSurtidas]
     );
 
     const submission = submissionRows[0];
@@ -63,10 +79,9 @@ router.post('/enviar', requireAuth, async (req, res, next) => {
       fileName,
       fileUrl: uploadResult.fileUrl,
       total,
-      incluidas,
-      excluidas,
-      ratificadas,
-      pendientes: total - incluidas - excluidas - ratificadas,
+      recetasCompletas,
+      recetasIncompletas,
+      recetasNoSurtidas,
       creadoEn: submission.creado_en,
     });
   } catch (err) {

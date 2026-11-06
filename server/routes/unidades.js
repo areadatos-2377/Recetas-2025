@@ -5,13 +5,13 @@ const { requireAuth } = require('../middleware/requireAuth');
 const router = express.Router();
 
 const TIPO_UNIDAD_VALUES = ['FIJA', 'MOVIL'];
-const CONDICION_UNIDAD_VALUES = ['SE_RATIFICA', 'SE_INCLUYE', 'SE_EXCLUYE'];
-const OBSERVACIONES_MAX_LEN = 5000;
+const SURTIMIENTO_FIELDS = ['recetas_completas', 'recetas_incompletas', 'recetas_no_surtidas'];
+const MAX_CANTIDAD_RECETAS = 2147483647;
 const TEXT_FIELD_MAX_LEN = 300;
 const CLUES_MAX_LEN = 11;
 
 // Editables en cualquier unidad, venga o no del padron oficial.
-const UNIVERSAL_FIELDS = ['tipo_unidad', 'condicion_unidad', 'observaciones'];
+const UNIVERSAL_FIELDS = ['tipo_unidad', ...SURTIMIENTO_FIELDS];
 
 // Solo editables en unidades creadas a mano (origen_manual = true): una
 // unidad del padron oficial (Excel legacy) no debe poder cambiar su CLUES
@@ -48,7 +48,8 @@ function trimmedOrNull(value) {
 router.get('/unidades', requireAuth, async (req, res, next) => {
   try {
     const { rows } = await pool.query(
-      `SELECT id, clues, estado, tipo_unidad, condicion_unidad, nivel_atencion,
+      `SELECT id, clues, estado, tipo_unidad, condicion_unidad,
+              recetas_completas, recetas_incompletas, recetas_no_surtidas, nivel_atencion,
               nombre_tipo_establecimiento, propiedad_inmueble, nombre_tipologia,
               nombre_unidad, municipio, localidad, asentamiento, tipo_vialidad,
               vialidad, numero_exterior, numero_interior, codigo_postal, observaciones,
@@ -98,9 +99,9 @@ router.get('/progreso', requireAuth, async (req, res, next) => {
       `SELECT
          COUNT(*)::int AS total,
          COUNT(*) FILTER (
-           WHERE condicion_unidad IS NOT NULL
-             AND observaciones IS NOT NULL
-             AND btrim(observaciones) <> ''
+           WHERE recetas_completas IS NOT NULL
+             AND recetas_incompletas IS NOT NULL
+             AND recetas_no_surtidas IS NOT NULL
          )::int AS capturadas
        FROM unidades WHERE estado = $1 AND ($2::text IS NULL OR clues = $2)`,
       [req.estado, req.clues]
@@ -128,17 +129,6 @@ router.post('/unidades', requireAuth, async (req, res, next) => {
     if (body.tipo_unidad !== undefined && body.tipo_unidad !== null && !TIPO_UNIDAD_VALUES.includes(body.tipo_unidad)) {
       return res.status(400).json({ error: 'TIPO_UNIDAD invalido' });
     }
-    if (
-      body.condicion_unidad !== undefined &&
-      body.condicion_unidad !== null &&
-      !CONDICION_UNIDAD_VALUES.includes(body.condicion_unidad)
-    ) {
-      return res.status(400).json({ error: 'CONDICION_UNIDAD invalido' });
-    }
-    if (typeof body.observaciones === 'string' && body.observaciones.length > OBSERVACIONES_MAX_LEN) {
-      return res.status(400).json({ error: `OBSERVACIONES demasiado largo (max. ${OBSERVACIONES_MAX_LEN} caracteres)` });
-    }
-
     const textFields = {};
     for (const field of MANUAL_ONLY_FIELDS) {
       const value = trimmedOrNull(body[field]);
@@ -157,19 +147,20 @@ router.post('/unidades', requireAuth, async (req, res, next) => {
     try {
       ({ rows } = await pool.query(
         `INSERT INTO unidades (
-           estado, clues, origen_manual, tipo_unidad, condicion_unidad, observaciones,
+           estado, clues, origen_manual, tipo_unidad,
            nivel_atencion, nombre_tipo_establecimiento, propiedad_inmueble, nombre_tipologia,
            nombre_unidad, municipio, localidad, asentamiento, tipo_vialidad, vialidad,
            numero_exterior, numero_interior, codigo_postal,
            estatus_operacion, latitud, longitud, capturado_en
          ) VALUES (
-           $1, $2, true, $3, $4, $5,
-           $6, $7, $8, $9,
-           $10, $11, $12, $13, $14, $15,
-           $16, $17, $18,
-           $19, $20, $21, now()
+           $1, $2, true, $3,
+           $4, $5, $6, $7,
+           $8, $9, $10, $11, $12, $13,
+           $14, $15, $16,
+           $17, $18, $19, now()
          )
-         RETURNING id, clues, estado, tipo_unidad, condicion_unidad, nivel_atencion,
+         RETURNING id, clues, estado, tipo_unidad, condicion_unidad,
+                   recetas_completas, recetas_incompletas, recetas_no_surtidas, nivel_atencion,
                    nombre_tipo_establecimiento, propiedad_inmueble, nombre_tipologia,
                    nombre_unidad, municipio, localidad, asentamiento, tipo_vialidad,
                    vialidad, numero_exterior, numero_interior, codigo_postal, observaciones,
@@ -179,8 +170,6 @@ router.post('/unidades', requireAuth, async (req, res, next) => {
           req.estado,
           textFields.clues,
           body.tipo_unidad ?? null,
-          body.condicion_unidad ?? null,
-          typeof body.observaciones === 'string' ? body.observaciones : null,
           textFields.nivel_atencion,
           textFields.nombre_tipo_establecimiento,
           textFields.propiedad_inmueble,
@@ -236,25 +225,19 @@ router.put('/unidades/:id', requireAuth, async (req, res, next) => {
       return res.status(400).json({
         error: origenManual
           ? `Campo no editable: ${rejectedFields.join(', ')}`
-          : `Esta unidad viene del padron oficial; solo se puede editar tipo_unidad, condicion_unidad y observaciones (intentaste: ${rejectedFields.join(', ')})`,
+          : `Esta unidad viene del padron oficial; solo se puede editar tipo_unidad y cantidades de recetas (intentaste: ${rejectedFields.join(', ')})`,
       });
     }
 
     if (body.tipo_unidad !== undefined && body.tipo_unidad !== null && !TIPO_UNIDAD_VALUES.includes(body.tipo_unidad)) {
       return res.status(400).json({ error: 'TIPO_UNIDAD invalido' });
     }
-    if (
-      body.condicion_unidad !== undefined &&
-      body.condicion_unidad !== null &&
-      !CONDICION_UNIDAD_VALUES.includes(body.condicion_unidad)
-    ) {
-      return res.status(400).json({ error: 'CONDICION_UNIDAD invalido' });
-    }
-    if (body.observaciones !== undefined && body.observaciones !== null && typeof body.observaciones !== 'string') {
-      return res.status(400).json({ error: 'OBSERVACIONES invalido' });
-    }
-    if (typeof body.observaciones === 'string' && body.observaciones.length > OBSERVACIONES_MAX_LEN) {
-      return res.status(400).json({ error: `OBSERVACIONES demasiado largo (max. ${OBSERVACIONES_MAX_LEN} caracteres)` });
+    for (const field of SURTIMIENTO_FIELDS) {
+      const value = body[field];
+      if (value !== undefined && value !== null &&
+          (!Number.isSafeInteger(value) || value < 0 || value > MAX_CANTIDAD_RECETAS)) {
+        return res.status(400).json({ error: `${field} debe ser un entero entre 0 y ${MAX_CANTIDAD_RECETAS}` });
+      }
     }
 
     const setClauses = [];
@@ -264,13 +247,10 @@ router.put('/unidades/:id', requireAuth, async (req, res, next) => {
       params.push(body.tipo_unidad);
       setClauses.push(`tipo_unidad = $${params.length}`);
     }
-    if (body.condicion_unidad !== undefined) {
-      params.push(body.condicion_unidad);
-      setClauses.push(`condicion_unidad = $${params.length}`);
-    }
-    if (body.observaciones !== undefined) {
-      params.push(body.observaciones);
-      setClauses.push(`observaciones = $${params.length}`);
+    for (const field of SURTIMIENTO_FIELDS) {
+      if (body[field] === undefined) continue;
+      params.push(body[field]);
+      setClauses.push(`${field} = $${params.length}`);
     }
 
     if (origenManual) {

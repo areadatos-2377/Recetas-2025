@@ -64,14 +64,13 @@ router.get('/admin/resumen', requireAdmin, async (req, res, next) => {
         estado,
         COUNT(*)::int AS total,
         COUNT(*) FILTER (
-          WHERE condicion_unidad IS NOT NULL
-            AND observaciones IS NOT NULL
-            AND btrim(observaciones) <> ''
+          WHERE recetas_completas IS NOT NULL
+            AND recetas_incompletas IS NOT NULL
+            AND recetas_no_surtidas IS NOT NULL
         )::int AS capturadas,
-        COUNT(*) FILTER (WHERE condicion_unidad = 'SE_INCLUYE')::int AS incluidas,
-        COUNT(*) FILTER (WHERE condicion_unidad = 'SE_EXCLUYE')::int AS excluidas,
-        COUNT(*) FILTER (WHERE condicion_unidad = 'SE_RATIFICA')::int AS ratificadas,
-        COUNT(*) FILTER (WHERE origen_manual)::int AS manuales
+        COALESCE(SUM(recetas_completas), 0)::bigint AS recetas_completas,
+        COALESCE(SUM(recetas_incompletas), 0)::bigint AS recetas_incompletas,
+        COALESCE(SUM(recetas_no_surtidas), 0)::bigint AS recetas_no_surtidas
       FROM unidades
       GROUP BY estado
       ORDER BY estado
@@ -95,10 +94,9 @@ router.get('/admin/resumen', requireAdmin, async (req, res, next) => {
       estado: row.estado,
       total: row.total,
       capturadas: row.capturadas,
-      incluidas: row.incluidas,
-      excluidas: row.excluidas,
-      ratificadas: row.ratificadas,
-      manuales: row.manuales,
+      recetasCompletas: Number(row.recetas_completas),
+      recetasIncompletas: Number(row.recetas_incompletas),
+      recetasNoSurtidas: Number(row.recetas_no_surtidas),
       ultimoEnvio: ultimoPorEstado[row.estado] || null,
     }));
 

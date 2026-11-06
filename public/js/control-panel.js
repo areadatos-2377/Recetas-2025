@@ -98,8 +98,8 @@
     return row.total > 0 ? Math.round((row.capturadas / row.total) * 100) : 0;
   }
 
-  function validationCount(row) {
-    return (row.incluidas || 0) + (row.excluidas || 0) + (row.manuales || 0);
+  function recetasCount(row) {
+    return row.recetasCompletas + row.recetasIncompletas + row.recetasNoSurtidas;
   }
 
   function topRows(list, count, scoreFn) {
@@ -254,11 +254,11 @@
     var total = 0;
     var capturadas = 0;
     var enviaron = 0;
-    var observaciones = 0;
+    var recetasRegistradas = 0;
     rows.forEach(function (r) {
       total += r.total;
       capturadas += r.capturadas;
-      observaciones += validationCount(r);
+      recetasRegistradas += recetasCount(r);
       if (r.ultimoEnvio) enviaron++;
     });
     var pct = total > 0 ? Math.round((capturadas / total) * 1000) / 10 : 0;
@@ -273,13 +273,13 @@
     });
     var maxPendiente = riskRows.length > 0 ? (riskRows[0].total - riskRows[0].capturadas) : 0;
     var activeRows = latestSentRows(4);
-    var observationRows = topRows(rows, 4, validationCount);
+    var observationRows = topRows(rows, 4, recetasCount);
 
     var entidadesConCaptura = rows.filter(function (r) { return r.capturadas > 0; }).length;
 
     var headline;
     if (capturadas === 0 && enviaron === 0) {
-      headline = 'El levantamiento del padrón todavía no arranca en ninguna entidad';
+      headline = 'La captura del surtimiento todavía no arranca en ninguna entidad';
     } else if (enviaron === rows.length) {
       headline = 'Las ' + rows.length + ' entidades ya iniciaron su reporte';
     } else if (enviaron > 0) {
@@ -317,10 +317,10 @@
       renderEntityList(activeRows, function (r) { return formatFecha(r.ultimoEnvio.creadoEn); }, 'Todavía no hay envíos confirmados.') +
       '</div>' +
       '<div class="insight-col">' +
-      '<p class="eyebrow">Hallazgos de validación</p>' +
-      '<h3>Revisión operativa</h3>' +
-      '<p class="insight-col-copy">' + pluralize(observaciones, 'registro requiere', 'registros requieren') + ' lectura por incluir, excluir o no contar con CLUES.</p>' +
-      renderEntityList(observationRows, function (r) { return pluralize(validationCount(r), 'hallazgo', 'hallazgos'); }, 'No hay hallazgos acumulados.') +
+      '<p class="eyebrow">Volumen reportado</p>' +
+      '<h3>Surtimiento de recetas</h3>' +
+      '<p class="insight-col-copy">' + pluralize(recetasRegistradas, 'receta registrada', 'recetas registradas') + ' en las tres categorías.</p>' +
+      renderEntityList(observationRows, function (r) { return pluralize(recetasCount(r), 'receta', 'recetas'); }, 'Todavía no hay cantidades capturadas.') +
       '</div>';
 
     updateFilterLabels();
@@ -331,7 +331,7 @@
       all: rows.length,
       pending: rows.filter(function (r) { return !r.ultimoEnvio; }).length,
       sent: rows.filter(function (r) { return !!r.ultimoEnvio; }).length,
-      observations: rows.filter(function (r) { return validationCount(r) > 0; }).length,
+      observations: rows.filter(function (r) { return r.capturadas > 0; }).length,
     };
     quickFilters.querySelectorAll('[data-filter]').forEach(function (btn) {
       var filter = btn.getAttribute('data-filter');
@@ -354,10 +354,9 @@
       '<td class="num">' + formatNumber(r.total) + '</td>' +
       '<td class="num">' + formatNumber(r.capturadas) + '</td>' +
       '<td class="num ' + pctClass + '">' + pct + '%</td>' +
-      '<td class="num">' + formatNumber(r.incluidas) + '</td>' +
-      '<td class="num">' + formatNumber(r.excluidas) + '</td>' +
-      '<td class="num">' + formatNumber(r.ratificadas) + '</td>' +
-      '<td class="num">' + formatNumber(r.manuales) + '</td>' +
+      '<td class="num">' + formatNumber(r.recetasCompletas) + '</td>' +
+      '<td class="num">' + formatNumber(r.recetasIncompletas) + '</td>' +
+      '<td class="num">' + formatNumber(r.recetasNoSurtidas) + '</td>' +
       '<td>' + ultimo + '</td>' +
       '</tr>'
     );
@@ -367,7 +366,7 @@
     var source = rows.filter(function (r) {
       if (activeFilter === 'pending') return !r.ultimoEnvio;
       if (activeFilter === 'sent') return !!r.ultimoEnvio;
-      if (activeFilter === 'observations') return validationCount(r) > 0;
+      if (activeFilter === 'observations') return r.capturadas > 0;
       return true;
     });
     var withPct = source.map(function (r) {

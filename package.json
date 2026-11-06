@@ -2,13 +2,14 @@
   "name": "captura-unidades-imb",
   "version": "1.0.0",
   "private": true,
-  "description": "Captura de TIPO_UNIDAD y CONDICION_UNIDAD por entidad federativa sobre el padron CLUES_IMB",
+  "description": "Captura de surtimiento de recetas por CLUES del año 2025",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
     "start": "node server/index.js",
     "seed": "node server/scripts/seed.js",
+    "migrate:surtimiento": "node server/scripts/migrate-surtimiento-recetas.js",
     "gen:passwords": "node server/scripts/generate-passwords.js"
   },
   "dependencies": {

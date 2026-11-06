@@ -32,6 +32,9 @@ CREATE TABLE IF NOT EXISTS submissions (
   incluidas         INTEGER,
   excluidas         INTEGER,
   ratificadas       INTEGER,
+  recetas_completas BIGINT,
+  recetas_incompletas BIGINT,
+  recetas_no_surtidas BIGINT,
   creado_en         TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -46,6 +49,9 @@ CREATE TABLE IF NOT EXISTS unidades (
   estado                         TEXT NOT NULL,
   tipo_unidad                    TEXT CHECK (tipo_unidad IN ('FIJA', 'MOVIL')),
   condicion_unidad               TEXT CHECK (condicion_unidad IN ('SE_INCLUYE', 'SE_EXCLUYE', 'SE_RATIFICA')),
+  recetas_completas              INTEGER CHECK (recetas_completas >= 0),
+  recetas_incompletas            INTEGER CHECK (recetas_incompletas >= 0),
+  recetas_no_surtidas            INTEGER CHECK (recetas_no_surtidas >= 0),
   nivel_atencion                 TEXT,
   nombre_tipo_establecimiento    TEXT,
   propiedad_inmueble             TEXT,

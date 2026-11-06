@@ -4,7 +4,9 @@ const COLUMNS = [
   { header: 'ESTADO', key: 'estado', width: 22 },
   { header: 'CLUES', key: 'clues', width: 14 },
   { header: 'TIPO_UNIDAD', key: 'tipo_unidad', width: 14 },
-  { header: 'CONDICION_UNIDAD', key: 'condicion_unidad', width: 16 },
+  { header: 'A. COMPLETAS - CANTIDAD', key: 'recetas_completas', width: 24 },
+  { header: 'B. INCOMPLETAS - CANTIDAD', key: 'recetas_incompletas', width: 26 },
+  { header: 'C. NO SURTIDAS - CANTIDAD', key: 'recetas_no_surtidas', width: 26 },
   { header: 'NIVEL ATENCION', key: 'nivel_atencion', width: 16 },
   { header: 'NOMBRE TIPO ESTABLECIMIENTO', key: 'nombre_tipo_establecimiento', width: 28 },
   { header: 'PROPIEDAD DEL INMUEBLE', key: 'propiedad_inmueble', width: 20 },
@@ -18,19 +20,12 @@ const COLUMNS = [
   { header: 'NUMERO EXTERIOR', key: 'numero_exterior', width: 14 },
   { header: 'NUMERO INTERIOR', key: 'numero_interior', width: 14 },
   { header: 'CODIGO POSTAL', key: 'codigo_postal', width: 12 },
-  { header: 'OBSERVACIONES', key: 'observaciones', width: 40 },
   { header: 'ESTATUS DE OPERACION', key: 'estatus_operacion', width: 20 },
   { header: 'LATITUD', key: 'latitud', width: 12 },
   { header: 'LONGITUD', key: 'longitud', width: 12 },
 ];
 
 const TIPO_UNIDAD_LABELS = { FIJA: 'FIJA', MOVIL: 'MOVIL' };
-const CONDICION_UNIDAD_LABELS = {
-  SE_RATIFICA: 'SE RATIFICA',
-  SE_INCLUYE: 'SE INCLUYE',
-  SE_EXCLUYE: 'SE EXCLUYE',
-};
-
 async function buildUnidadesWorkbook(estado, unidades) {
   const workbook = new ExcelJS.Workbook();
   const sheetName = estado.substring(0, 31) || 'Unidades';
@@ -42,7 +37,6 @@ async function buildUnidadesWorkbook(estado, unidades) {
     sheet.addRow({
       ...unidad,
       tipo_unidad: TIPO_UNIDAD_LABELS[unidad.tipo_unidad] || '',
-      condicion_unidad: CONDICION_UNIDAD_LABELS[unidad.condicion_unidad] || '',
     });
   }
 

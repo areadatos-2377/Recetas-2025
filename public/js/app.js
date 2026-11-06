@@ -17,12 +17,11 @@
   var fieldTimers = Object.create(null); // "id:campo" -> timeoutId, para el debounce de texto
   var searchTimer = null;
 
-  var CONDICION_OPTIONS = [
-    { value: 'SE_RATIFICA', label: 'Se ratifica' },
-    { value: 'SE_INCLUYE', label: 'Se incluye' },
-    { value: 'SE_EXCLUYE', label: 'Se excluye' },
+  var SURTIMIENTO_FIELDS = [
+    { field: 'recetas_completas', label: 'A. Completas' },
+    { field: 'recetas_incompletas', label: 'B. Incompletas' },
+    { field: 'recetas_no_surtidas', label: 'C. No surtidas' },
   ];
-  var CONDICION_LABEL_TEXT = 'Acción a realizar en el anexo 1';
 
   // Campos que solo existen/editan en unidades agregadas a mano (sin CLUES
   // original). Debe coincidir con MANUAL_ONLY_FIELDS del backend.
@@ -99,12 +98,14 @@
     }
   }
 
-  function hasText(value) {
-    return !!(value && String(value).trim() !== '');
+  function hasAmount(value) {
+    return Number.isSafeInteger(value) && value >= 0 && value <= 2147483647;
   }
 
   function isCapturada(u) {
-    return !!(u.condicion_unidad && hasText(u.observaciones));
+    return SURTIMIENTO_FIELDS.every(function (field) {
+      return hasAmount(u[field.field]);
+    });
   }
 
   function findUnidad(id) {
@@ -266,21 +267,16 @@
     );
   }
 
-  function radioGroupHtml(name, field, id, options, currentValue) {
-    var html = '<div class="radio-group" role="radiogroup">';
-    for (var i = 0; i < options.length; i++) {
-      var opt = options[i];
-      var optId = field + '-' + opt.value + '-' + id;
-      var checked = currentValue === opt.value ? ' checked' : '';
-      html +=
-        '<label class="radio-option" for="' + optId + '">' +
-        '<input type="radio" id="' + optId + '" name="' + name + '" value="' + opt.value + '" ' +
-        'data-field="' + field + '" data-id="' + id + '"' + checked + '>' +
-        '<span>' + escapeHtml(opt.label) + '</span>' +
-        '</label>';
-    }
-    html += '</div>';
-    return html;
+  function quantityFieldHtml(field, id, value) {
+    var inputId = field.field + '-' + id;
+    var inputValue = value === null || value === undefined ? '' : String(value);
+    return (
+      '<div class="field detail-editable-field">' +
+      '<label for="' + inputId + '">' + escapeHtml(field.label) + ' — Cantidad *</label>' +
+      '<input type="number" id="' + inputId + '" min="0" max="2147483647" step="1" required ' +
+      'data-field="' + field.field + '" data-id="' + id + '" value="' + escapeHtml(inputValue) + '">' +
+      '</div>'
+    );
   }
 
   function buildDetailRowHtml(u) {
@@ -318,7 +314,11 @@
       infoHtml = '<div class="detail-grid">' + infoFields + '</div>';
     }
 
-    var condicionRadios = radioGroupHtml('condicion_unidad-' + id, 'condicion_unidad', id, CONDICION_OPTIONS, u.condicion_unidad);
+    var quantitiesHtml = '';
+    for (var j = 0; j < SURTIMIENTO_FIELDS.length; j++) {
+      var field = SURTIMIENTO_FIELDS[j];
+      quantitiesHtml += quantityFieldHtml(field, id, u[field.field]);
+    }
 
     return (
       '<tr class="detail-row" data-id="' + id + '">' +
@@ -327,15 +327,9 @@
       infoHtml +
       '<div class="capture-form">' +
       '<div class="form-group">' +
-      '<span class="form-label">' + escapeHtml(CONDICION_LABEL_TEXT) + '</span>' +
-      condicionRadios +
-      '</div>' +
-      '<div class="form-group form-group-wide">' +
-      '<label class="form-label" for="obs-' + id + '">Observaciones</label>' +
-      '<p class="field-hint">Explica brevemente la razón de la acción elegida — se necesita para que la unidad cuente como capturada.</p>' +
-      '<textarea id="obs-' + id + '" class="observaciones-textarea" rows="3" ' +
-      'data-field="observaciones" data-id="' + id + '" ' +
-      'placeholder="Razón de la inclusión, exclusión o ratificación…">' + escapeHtml(u.observaciones || '') + '</textarea>' +
+      '<span class="form-label">Surtimiento de recetas por CLUES del año 2025:</span>' +
+      '<p class="field-hint">Captura una cantidad entera (0 o mayor) en los tres campos para cada CLUES. Todos son obligatorios para completar el envío.</p>' +
+      '<div class="detail-grid">' + quantitiesHtml + '</div>' +
       '</div>' +
       '<div class="save-feedback" data-feedback-for="' + id + '"></div>' +
       '</div>' +
@@ -436,7 +430,7 @@
   function updateRowVisualsAfterSave(id, field, value) {
     var row = tablesContainer.querySelector('tr.unidad-row[data-id="' + id + '"]');
     if (!row) return;
-    if (field === 'condicion_unidad' || field === 'observaciones') {
+    if (SURTIMIENTO_FIELDS.some(function (item) { return item.field === field; })) {
       var unidad = findUnidad(id);
       var cell = row.querySelector('.col-estatus');
       if (cell && unidad) cell.innerHTML = statusBadgeHtml(unidad);
@@ -488,17 +482,10 @@
       });
   }
 
-  tablesContainer.addEventListener('change', function (event) {
-    var el = event.target;
-    if (el.matches('input[type="radio"][data-field="condicion_unidad"]')) {
-      saveField(Number(el.getAttribute('data-id')), 'condicion_unidad', el.value);
-    }
-  });
-
   function scheduleFieldSave(el) {
     var id = Number(el.getAttribute('data-id'));
     var field = el.getAttribute('data-field');
-    var value = el.value;
+    var value = el.type === 'number' ? (el.value === '' ? null : Number(el.value)) : el.value;
     var key = id + ':' + field;
     if (fieldTimers[key]) {
       clearTimeout(fieldTimers[key]);
@@ -517,20 +504,21 @@
     if (fieldTimers[key]) {
       clearTimeout(fieldTimers[key]);
       delete fieldTimers[key];
-      saveField(id, field, el.value);
+      var value = el.type === 'number' ? (el.value === '' ? null : Number(el.value)) : el.value;
+      saveField(id, field, value);
     }
   }
 
   tablesContainer.addEventListener('input', function (event) {
     var el = event.target;
-    if (el.matches('textarea[data-field="observaciones"]') || el.matches('input[type="text"][data-field]')) {
+    if (el.matches('input[type="number"][data-field]') || el.matches('input[type="text"][data-field]')) {
       scheduleFieldSave(el);
     }
   });
 
   tablesContainer.addEventListener('focusout', function (event) {
     var el = event.target;
-    if (el.matches('textarea[data-field="observaciones"]') || el.matches('input[type="text"][data-field]')) {
+    if (el.matches('input[type="number"][data-field]') || el.matches('input[type="text"][data-field]')) {
       flushFieldSave(el);
     }
   });
@@ -721,12 +709,6 @@
       payload[field] = input ? input.value : '';
     }
 
-    var checkedCondicion = addUnitForm.querySelector('input[name="condicion_unidad"]:checked');
-    payload.condicion_unidad = checkedCondicion ? checkedCondicion.value : null;
-
-    var observacionesInput = addUnitForm.querySelector('[name="observaciones"]');
-    payload.observaciones = observacionesInput ? observacionesInput.value : '';
-
     if (!payload.nombre_unidad || !payload.nombre_unidad.trim()) {
       addUnitError.hidden = false;
       addUnitError.textContent = 'El nombre de la unidad es obligatorio.';
@@ -772,17 +754,24 @@
   // ---------------------------------------------------------------------
   function computeSendSummary() {
     var total = state.unidades.length;
-    var incluidas = 0;
-    var excluidas = 0;
-    var ratificadas = 0;
+    var recetasCompletas = 0;
+    var recetasIncompletas = 0;
+    var recetasNoSurtidas = 0;
+    var pendientes = 0;
     for (var i = 0; i < state.unidades.length; i++) {
-      var c = state.unidades[i].condicion_unidad;
-      if (c === 'SE_INCLUYE') incluidas++;
-      else if (c === 'SE_EXCLUYE') excluidas++;
-      else if (c === 'SE_RATIFICA') ratificadas++;
+      var unidad = state.unidades[i];
+      if (hasAmount(unidad.recetas_completas)) recetasCompletas += unidad.recetas_completas;
+      if (hasAmount(unidad.recetas_incompletas)) recetasIncompletas += unidad.recetas_incompletas;
+      if (hasAmount(unidad.recetas_no_surtidas)) recetasNoSurtidas += unidad.recetas_no_surtidas;
+      if (!isCapturada(unidad)) pendientes++;
     }
-    var pendientes = total - incluidas - excluidas - ratificadas;
-    return { total: total, incluidas: incluidas, excluidas: excluidas, ratificadas: ratificadas, pendientes: pendientes };
+    return {
+      total: total,
+      recetasCompletas: recetasCompletas,
+      recetasIncompletas: recetasIncompletas,
+      recetasNoSurtidas: recetasNoSurtidas,
+      pendientes: pendientes,
+    };
   }
 
   function openConfirmModal() {
@@ -791,17 +780,17 @@
       '<p>Estás a punto de generar y subir el archivo de captura para <strong>' + escapeHtml(state.estado || '') + '</strong>.</p>' +
       '<ul class="summary-list">' +
       '<li><strong>' + formatNumber(summary.total) + '</strong> unidades en total</li>' +
-      '<li><strong>' + formatNumber(summary.ratificadas) + '</strong> se ratifican</li>' +
-      '<li><strong>' + formatNumber(summary.incluidas) + '</strong> se incluyen</li>' +
-      '<li><strong>' + formatNumber(summary.excluidas) + '</strong> se excluyen</li>' +
-      '<li><strong>' + formatNumber(summary.pendientes) + '</strong> pendientes de captura</li>' +
+      '<li><strong>' + formatNumber(summary.recetasCompletas) + '</strong> recetas completas</li>' +
+      '<li><strong>' + formatNumber(summary.recetasIncompletas) + '</strong> recetas incompletas</li>' +
+      '<li><strong>' + formatNumber(summary.recetasNoSurtidas) + '</strong> recetas no surtidas</li>' +
+      '<li><strong>' + formatNumber(summary.pendientes) + '</strong> unidades pendientes de completar las tres cantidades</li>' +
       '</ul>' +
-      '<p>Puedes enviar más de una vez; cada envío genera un nuevo archivo.</p>';
+      '<p>Se requiere capturar las tres cantidades para cada CLUES antes de enviar. Puedes enviar más de una vez; cada envío genera un nuevo archivo.</p>';
     confirmModalResult.hidden = true;
     confirmModalResult.innerHTML = '';
     confirmModalResult.className = 'modal-result';
     confirmSendBtn.hidden = false;
-    confirmSendBtn.disabled = false;
+    confirmSendBtn.disabled = summary.pendientes > 0;
     confirmSendBtn.textContent = 'Confirmar y enviar';
     confirmCancelBtn.textContent = 'Cancelar';
     confirmModal.hidden = false;

@@ -19,9 +19,8 @@ const ESTADO_NORMALIZADO = {
   'VERACRUZ DE IGNACIO DE LA LLAVE': 'VERACRUZ',
 };
 
-// TIPO_UNIDAD, CONDICION_UNIDAD y OBSERVACIONES vienen vacios en el Excel legacy
-// y se llenan solo desde la app, por lo que NO se siembran aqui: si el seed se
-// vuelve a correr no debe pisar la captura que ya hicieron los usuarios.
+// Los campos de captura se llenan solo desde la app y no se siembran aqui,
+// para que volver a correr el seed no pise la informacion de los usuarios.
 const COLUMN_MAP = {
   ESTADO: 'estado',
   CLUES: 'clues',
