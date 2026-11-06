@@ -272,7 +272,7 @@
     var inputValue = value === null || value === undefined ? '' : String(value);
     return (
       '<div class="field detail-editable-field">' +
-      '<label for="' + inputId + '">' + escapeHtml(field.label) + ' — Cantidad *</label>' +
+      '<label for="' + inputId + '">' + escapeHtml(field.label) + ' – Cantidad</label>' +
       '<input type="number" id="' + inputId + '" min="0" max="2147483647" step="1" required ' +
       'data-field="' + field.field + '" data-id="' + id + '" value="' + escapeHtml(inputValue) + '">' +
       '</div>'
@@ -327,8 +327,9 @@
       infoHtml +
       '<div class="capture-form">' +
       '<div class="form-group">' +
-      '<span class="form-label">Surtimiento de recetas por CLUES del año 2025:</span>' +
-      '<p class="field-hint">Captura una cantidad entera (0 o mayor) en los tres campos para cada CLUES. Todos son obligatorios para completar el envío.</p>' +
+      '<span class="form-label">Surtimiento de recetas por CLUES, 2025</span>' +
+      '<span class="form-label">Cantidad de Recetas:</span>' +
+      '<p class="field-hint">Captura una cantidad entera (0 o mayor) en los tres campos para cada CLUES. Todos los campos son obligatorios para completar el envío.</p>' +
       '<div class="detail-grid">' + quantitiesHtml + '</div>' +
       '</div>' +
       '<div class="save-feedback" data-feedback-for="' + id + '"></div>' +
