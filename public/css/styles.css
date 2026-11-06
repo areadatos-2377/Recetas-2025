@@ -1111,6 +1111,36 @@ tr.detail-row td {
   border-radius: 2px;
 }
 
+/* Seccion de captura: letra mas grande que los datos de la unidad. */
+.capture-form .form-label {
+  font-size: 1.1rem;
+}
+
+.capture-form .field-hint {
+  font-size: 0.98rem;
+}
+
+.capture-form .field label {
+  font-size: 1.05rem;
+}
+
+.capture-form .detail-editable-field input {
+  font-size: 1.15rem;
+  padding: 0.5em 0.7em;
+}
+
+/* Sin botones de subir/bajar valor en los cuadros de cantidad. */
+.quantity-grid input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.quantity-grid input[type="number"]::-webkit-outer-spin-button,
+.quantity-grid input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 .form-group-wide {
   grid-column: 1 / -1;
 }
