@@ -73,6 +73,7 @@ router.get('/admin/resumen', requireAdmin, async (req, res, next) => {
         COALESCE(SUM(recetas_no_surtidas), 0)::bigint AS recetas_no_surtidas
       FROM unidades
       WHERE archivado_en IS NULL
+        AND estado <> 'GUANAJUATO' -- Guanajuato no participa en el proyecto
       GROUP BY estado
       ORDER BY estado
     `);

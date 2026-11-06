@@ -24,12 +24,13 @@ router.get('/estados', async (req, res, next) => {
       `SELECT ea.estado AS clave, COALESCE(ea.nombre, ea.estado) AS nombre,
               CASE WHEN ea.clues IS NOT NULL THEN 'unidad' ELSE 'estado' END AS tipo
        FROM entidades_auth ea
-       WHERE ea.clues IS NULL OR EXISTS (
-         SELECT 1 FROM unidades u
-         WHERE u.estado = COALESCE(ea.estado_real, ea.estado)
-           AND u.clues = ea.clues
-           AND u.archivado_en IS NULL
-       )
+       WHERE COALESCE(ea.estado_real, ea.estado) <> 'GUANAJUATO' -- no participa en el proyecto
+         AND (ea.clues IS NULL OR EXISTS (
+           SELECT 1 FROM unidades u
+           WHERE u.estado = COALESCE(ea.estado_real, ea.estado)
+             AND u.clues = ea.clues
+             AND u.archivado_en IS NULL
+         ))
        ORDER BY tipo, nombre`
     );
     res.json({ estados: rows });

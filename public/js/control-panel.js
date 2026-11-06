@@ -19,7 +19,7 @@
   var activeFilter = 'all';
   var currentView = 'table';
 
-  var DEFAULT_TABLE_TITLE = 'Las 25 entidades, de menor a mayor avance';
+  var DEFAULT_TABLE_TITLE = 'Las entidades, de menor a mayor avance';
 
   var CHART_VIEWS = {
     'pct-all': {
