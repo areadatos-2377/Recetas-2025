@@ -330,7 +330,7 @@
       '<span class="form-label">Surtimiento de recetas por CLUES, 2025</span>' +
       '<span class="form-label">Cantidad de Recetas:</span>' +
       '<p class="field-hint">Captura una cantidad entera (0 o mayor) en los tres campos para cada CLUES. Todos los campos son obligatorios para completar el envío.</p>' +
-      '<div class="detail-grid">' + quantitiesHtml + '</div>' +
+      '<div class="detail-grid quantity-grid">' + quantitiesHtml + '</div>' +
       '</div>' +
       '<div class="save-feedback" data-feedback-for="' + id + '"></div>' +
       '</div>' +
